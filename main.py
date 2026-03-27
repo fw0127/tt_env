@@ -97,9 +97,16 @@ class MyTTApi:
         return self._get(f"/api/statistics/{player_id}/ttr/{date_range}")
 
     def get_ttr_history(self, nuid: str, clicktt_id: str | None = None) -> Dict[str, Any]:
-        params = {"nuid": nuid}
-        if clicktt_id: params["clicktt_id"] = clicktt_id
-        return self._get("/api/ttr/history", params)
+        params = {}
+        effective_clicktt_id = clicktt_id
+        if not effective_clicktt_id and nuid:
+            match = re.search(r'\d+', nuid)
+            if match:
+                effective_clicktt_id = match.group(0)
+
+        if effective_clicktt_id:
+            params["clicktt_id"] = effective_clicktt_id
+        return self._get(f"/api/ttr/history/{nuid}", params)
 
     def get_ttr_player(self, nuid: str) -> Dict[str, Any]:
         return self._get(f"/api/ttr/player/{nuid}")
@@ -338,8 +345,8 @@ def run_team_analysis(api: MyTTApi, team_id: str) -> None:
     console.print(table)
 
 
-def render_ttr_history(api: MyTTApi, nuid: str) -> None:
-    data = api.get_ttr_history(nuid)
+def render_ttr_history(api: MyTTApi, nuid: str, clicktt_id: str | None = None) -> None:
+    data = api.get_ttr_history(nuid, clicktt_id=clicktt_id)
     if not isinstance(data, dict) or "event" not in data:
         show_json(data, title="TTR History Raw")
         return
@@ -474,7 +481,12 @@ def render_search_players(api: MyTTApi, query: str) -> None:
                 break
 
             if sub_choice == "1":
-                render_ttr_history(api, selected_player_id_input)
+                nuid = str(selected_player.get('internal_id') or "")
+                clicktt_id = str(selected_player.get('person_id') or "")
+                if not nuid:
+                    console.print("[red]错误: 找不到该球员的 NUID (internal_id)，无法获取历史记录。[/red]")
+                    continue
+                render_ttr_history(api, nuid, clicktt_id=clicktt_id)
             elif sub_choice == "2":
                 club_name = selected_player.get('club_name')
                 if not club_name or club_name == "-":
