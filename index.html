@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <title>MyTT 助手</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap');
+        body { font-family: 'Noto Sans SC', system-ui, sans-serif; }
+        .table { width: 100%; border-collapse: collapse; }
+        .table th, .table td { padding: 8px; text-align: left; border-bottom: 1px solid #e5e7eb; }
+        .positive { color: #22c55e; }
+        .negative { color: #ef4444; }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen">
+    <div class="max-w-2xl mx-auto p-4">
+        <div class="flex items-center justify-between mb-6">
+            <h1 class="text-2xl font-bold flex items-center gap-2">
+                🏓 MyTT 助手
+                <span class="text-sm bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">iPhone 版</span>
+            </h1>
+            <button onclick="toggleTokenModal()" class="text-sm px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center gap-1">
+                🔑 Token
+            </button>
+        </div>
+
+        <!-- Cookie 输入 -->
+        <div id="tokenModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl w-full max-w-md mx-4">
+                <h2 class="text-lg font-semibold mb-3">设置 Cookie Token（可选）</h2>
+                <input id="cookieInput" type="text" placeholder="sb-10-auth-token=xxx; ..." 
+                       class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl text-sm">
+                <p class="text-xs text-gray-500 mt-2">用于查看完整 TTR 和私密数据，与原脚本一致</p>
+                <div class="flex gap-3 mt-6">
+                    <button onclick="saveToken()" class="flex-1 bg-blue-600 text-white py-3 rounded-xl">保存</button>
+                    <button onclick="toggleTokenModal()" class="flex-1 bg-gray-200 dark:bg-gray-700 py-3 rounded-xl">取消</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主菜单 -->
+        <div class="grid grid-cols-2 gap-3 mb-8" id="menu">
+            <!-- 动态生成按钮 -->
+        </div>
+
+        <!-- 结果区域 -->
+        <div id="result" class="bg-white dark:bg-gray-800 rounded-3xl shadow-sm p-5 min-h-[400px]"></div>
+    </div>
+
+    <script>
+        // ==================== 配置 ====================
+        const BASE_URL = "https://www.mytischtennis.de";
+        let COOKIE = localStorage.getItem("mytt_cookie") || "";
+
+        // ==================== 核心 API 调用 ====================
+        async function apiGet(path, params = {}) {
+            const url = new URL(BASE_URL + path);
+            Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
+            const headers = { "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1" };
+            if (COOKIE) headers["Cookie"] = COOKIE;
+            const res = await fetch(url, { headers });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return res.json();
+        }
+
+        async function apiPost(path, data) {
+            const headers = { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": "Mozilla/5.0 (iPhone..." };
+            if (COOKIE) headers["Cookie"] = COOKIE;
+            const body = new URLSearchParams(data);
+            const res = await fetch(BASE_URL + path, { method: "POST", headers, body });
+            return res.json();
+        }
+
+        // ==================== 常用功能 ====================
+        const COMMON_ACTIONS = [
+            { key: "1", label: "搜索球员", func: async () => { const q = prompt("球员姓名，例如 Dang Qiu"); if (!q) return; const data = await apiPost("/api/search/players", {query: q, page:1, pagesize:20}); renderSearchPlayers(data); } },
+            { key: "2", label: "搜索俱乐部", func: async () => { const q = prompt("俱乐部名称，例如 Borussia"); if (!q) return; const data = await apiPost("/api/search/clubs", {query: q}); renderSearchClubs(data); } },
+            { key: "3", label: "实时 TTR", func: async () => { const nuid = prompt("球员 NUID，例如 NU7535"); if (!nuid) return; const data = await apiGet(`/api/ttr/player/${nuid}`); renderTTRPlayer(data, nuid); } },
+            { key: "4", label: "TTR 历史", func: async () => { const nuid = prompt("球员 NUID"); if (!nuid) return; const data = await apiGet(`/api/ttr/history/${nuid}`); renderTTRHistory(data); } },
+            { key: "5", label: "球队阵容", func: async () => { const tid = prompt("Team ID，例如 2953148"); if (!tid) return; const data = await apiGet("/api/ttr/team/players", {teamId: tid}); renderTeamPlayers(data, tid); } },
+            { key: "6", label: "球队分析（带实时 TTR）", func: async () => { const tid = prompt("Team ID"); if (!tid) return; const roster = await apiGet("/api/ttr/team/players", {teamId: tid}); renderTeamAnalysis(roster, tid); } },
+            { key: "7", label: "球队赛程", func: async () => { const tid = prompt("Team ID"); if (!tid) return; const data = await apiGet("/api/ttr/team/schedule", {teamId: tid, season: "25--26"}); renderTeamSchedule(data, tid); } },
+            { key: "8", label: "俱乐部所有球队", func: async () => { const clubnr = prompt("Club Number，例如 13118"); const org = prompt("协会，例如 WTTV"); if (!clubnr || !org) return; const data = await apiGet("/api/ttr/teams", {clubNumber: clubnr, organization: org}); renderClubTeams(data); } },
+            { key: "9", label: "联赛排名表", func: async () => { const assoc = prompt("协会，例如 WTTV"); const lid = prompt("League ID，例如 493079"); if (!assoc || !lid) return; const data = await apiGet(`/api/league-table/${assoc}/${lid}`); renderLeagueTable(data); } },
+            { key: "10", label: "比赛 Live", func: async () => { const mid = prompt("Meeting ID，例如 15348642"); if (!mid) return; const data = await apiGet(`/api/meeting/${mid}/live`); renderMeetingLive(data); } },
+        ];
+
+        // ==================== 渲染函数（移植原 rich 表格） ====================
+        function renderSearchPlayers(data) {
+            const results = data.results || [];
+            let html = `<h3 class="text-lg font-semibold mb-3">🔍 搜索结果（${data.total_count || 0} 条）</h3>`;
+            html += `<table class="table"><thead><tr><th>姓名</th><th>俱乐部</th><th>TTR</th><th>NUID</th></tr></thead><tbody>`;
+            results.forEach(p => {
+                const ttr = p.ttr || "需登录";
+                html += `<tr><td>${p.lastname} ${p.firstname}</td><td>${p.club_name || '-'}</td><td class="${parseInt(ttr)>0?'positive':''}">${ttr}</td><td>${p.internal_id || p.person_id}</td></tr>`;
+            });
+            html += `</tbody></table>`;
+            document.getElementById("result").innerHTML = html;
+        }
+
+        function renderSearchClubs(data) {
+            const results = data.results || [];
+            let html = `<h3 class="text-lg font-semibold mb-3">🏢 俱乐部搜索</h3><table class="table"><thead><tr><th>名称</th><th>Club Nr</th><th>协会</th></tr></thead><tbody>`;
+            results.forEach(c => html += `<tr><td>${c.clubname}</td><td>${c.clubnr}</td><td>${c.organization_short}</td></tr>`);
+            html += `</tbody></table>`;
+            document.getElementById("result").innerHTML = html;
+        }
+
+        function renderTTRPlayer(data, nuid) {
+            const ttr = data.ttr || "N/A";
+            document.getElementById("result").innerHTML = `
+                <div class="text-center">
+                    <h3 class="text-xl font-bold">👤 NUID: ${nuid}</h3>
+                    <div class="mt-4 text-6xl font-bold ${parseInt(ttr)>0 ? 'positive' : 'negative'}">${ttr}</div>
+                    <p class="text-sm text-gray-500 mt-2">实时 TTR</p>
+                </div>`;
+        }
+
+        function renderTTRHistory(data) {
+            const events = (data.event || []).reverse().slice(0, 12);
+            let html = `<h3 class="text-lg font-semibold mb-3">📈 TTR 历史（最近12场）</h3><table class="table"><thead><tr><th>日期</th><th>变动</th><th>赛后</th><th>比分</th><th>对手</th></tr></thead><tbody>`;
+            events.forEach(ev => {
+                const delta = ev.ttr_delta || 0;
+                const sign = delta > 0 ? '+' : '';
+                html += `<tr><td>${(ev.event_date_time || '').slice(0,10)}</td><td class="${delta>0?'positive':'negative'}">${sign}${delta}</td><td>${ev.ttr_after}</td><td>${ev.match?.[0]?.own_sets || 0}:${ev.match?.[0]?.other_sets || 0}</td><td>${ev.match?.[0]?.other_person_name || '-'}</td></tr>`;
+            });
+            html += `</tbody></table>`;
+            document.getElementById("result").innerHTML = html;
+        }
+
+        async function renderTeamAnalysis(rosterData, teamId) {
+            const roster = rosterData.data || [];
+            let html = `<h3 class="text-lg font-semibold mb-3">🔍 球队分析 (TeamID: ${teamId})</h3><table class="table"><thead><tr><th>排名</th><th>姓名</th><th>TTR</th></tr></thead><tbody>`;
+            for (let p of roster) {
+                const nuid = p.internal_id;
+                let ttr = "加载中...";
+                if (nuid) {
+                    try {
+                        const t = await apiGet(`/api/ttr/player/${nuid}`);
+                        ttr = t.ttr || "N/A";
+                    } catch(e) {}
+                }
+                html += `<tr><td>${p.rank}</td><td>${p.lastname} ${p.firstname}</td><td class="font-mono">${ttr}</td></tr>`;
+            }
+            html += `</tbody></table>`;
+            document.getElementById("result").innerHTML = html;
+        }
+
+        function renderTeamPlayers(data, tid) {
+            const roster = data.data || [];
+            let html = `<h3 class="text-lg font-semibold mb-3">📋 球队阵容 (TeamID: ${tid})</h3><table class="table"><thead><tr><th>排名</th><th>姓名</th><th>NUID</th></tr></thead><tbody>`;
+            roster.forEach(p => html += `<tr><td>${p.rank}</td><td>${p.lastname} ${p.firstname}</td><td>${p.internal_id}</td></tr>`);
+            html += `</tbody></table>`;
+            document.getElementById("result").innerHTML = html;
+        }
+
+        function renderTeamSchedule(data, tid) {
+            const matches = data.data || [];
+            let html = `<h3 class="text-lg font-semibold mb-3">📅 球队赛程 (TeamID: ${tid})</h3><table class="table"><thead><tr><th>日期</th><th>对手</th></tr></thead><tbody>`;
+            matches.forEach(m => html += `<tr><td>${(m.date||'').slice(0,10)}</td><td>${m.opponent_team_name}</td></tr>`);
+            html += `</tbody></table>`;
+            document.getElementById("result").innerHTML = html;
+        }
+
+        function renderClubTeams(data) {
+            const teams = data.data || [];
+            let html = `<h3 class="text-lg font-semibold mb-3">🏢 俱乐部球队</h3><table class="table"><thead><tr><th>球队</th><th>联赛</th><th>Team ID</th></tr></thead><tbody>`;
+            teams.forEach(t => html += `<tr><td>${t.team_name}</td><td>${t.league_name}</td><td>${t.team_id}</td></tr>`);
+            html += `</tbody></table>`;
+            document.getElementById("result").innerHTML = html;
+        }
+
+        function renderLeagueTable(data) {
+            const tableData = data.data?.table || data.data || [];
+            let html = `<h3 class="text-lg font-semibold mb-3">🏆 联赛排名表</h3><table class="table"><thead><tr><th>排</th><th>球队</th><th>积分</th></tr></thead><tbody>`;
+            tableData.forEach(row => html += `<tr><td>${row.rank}</td><td>${row.team_name}</td><td class="font-bold">${row.points}</td></tr>`);
+            html += `</tbody></table>`;
+            document.getElementById("result").innerHTML = html;
+        }
+
+        function renderMeetingLive(data) {
+            const live = data.data || {};
+            let html = `<div class="text-center"><h3 class="text-xl font-bold">${live.team_home} vs ${live.team_away}</h3><div class="text-5xl font-bold my-4">${live.matches_won_home || 0} : ${live.matches_won_away || 0}</div></div>`;
+            document.getElementById("result").innerHTML = html;
+        }
+
+        // ==================== 初始化菜单 ====================
+        function initMenu() {
+            const menuEl = document.getElementById("menu");
+            COMMON_ACTIONS.forEach(action => {
+                const btn = document.createElement("button");
+                btn.className = "bg-white dark:bg-gray-800 hover:bg-blue-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 text-left shadow-sm transition";
+                btn.innerHTML = `<div class="text-xl font-semibold">${action.key}</div><div class="text-base">${action.label}</div>`;
+                btn.onclick = action.func;
+                menuEl.appendChild(btn);
+            });
+        }
+
+        function saveToken() {
+            COOKIE = document.getElementById("cookieInput").value.trim();
+            localStorage.setItem("mytt_cookie", COOKIE);
+            toggleTokenModal();
+            alert("✅ Token 已保存！下次查询会自动带上。");
+        }
+
+        function toggleTokenModal() {
+            document.getElementById("tokenModal").classList.toggle("hidden");
+        }
+
+        // 启动
+        window.onload = () => {
+            initMenu();
+            // 暗黑模式自动适配 iPhone
+            if (window.matchMedia('(prefers-color-scheme: dark)').matches) document.documentElement.classList.add('dark');
+        };
+    </script>
+</body>
+</html>
