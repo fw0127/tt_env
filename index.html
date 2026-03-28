@@ -61,19 +61,27 @@
             try {
                 const headers = { 
                     "Content-Type": "application/x-www-form-urlencoded",
-                    "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1"
+                    "Accept": "application/json"
                 };
                 if (COOKIE) headers["Cookie"] = COOKIE;
 
-                // ✅ 直接调用 MyTT 官网（不走 Worker）
                 const body = new URLSearchParams(data);
-                const res = await fetch("https://www.mytischtennis.de" + path, { 
+                const res = await fetch(BASE_URL + path, { 
                     method: "POST", 
                     headers, 
                     body,
-                    credentials: "include"  // 允许跨域 Cookie
+                    mode: "cors",  // ✅ 允许跨域
+                    credentials: "omit"  // 不发送跨域 Cookie（避免 CORS 问题）
                 });
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+                console.log("POST 状态:", res.status);
+
+                if (!res.ok) {
+                    const text = await res.text();
+                    console.error("服务器返回:", text);
+                    throw new Error(`HTTP ${res.status}`);
+                }
+
                 return await res.json();
             } catch (error) {
                 console.error("❌ apiPost 错误:", error);
@@ -81,7 +89,6 @@
                 throw error;
             }
         }
-
         // 同时修改 apiGet
         async function apiGet(path, params = {}) {
             try {
