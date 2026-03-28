@@ -53,27 +53,46 @@
 
     <script>
         // ==================== 配置 ====================
-        const BASE_URL = "https://corsproxy.io/?https://www.mytischtennis.de";
+        const BASE_URL = "https://mytt-proxy.feng.wangs.workers.dev";
         let COOKIE = localStorage.getItem("mytt_cookie") || "";
 
         // ==================== 核心 API 调用 ====================
         async function apiGet(path, params = {}) {
-            const url = new URL(BASE_URL + path);
-            Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
-            const headers = { "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1" };
-            if (COOKIE) headers["Cookie"] = COOKIE;
-            const res = await fetch(url, { headers });
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            return res.json();
+            try {
+                const url = new URL(BASE_URL + path);
+                Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
+                
+                const headers = {};
+                // 【核心修改】这里不再使用被浏览器禁用的 "Cookie"，而是用我们在 Worker 里约定的 "X-MyTT-Cookie"
+                if (COOKIE) headers["X-MyTT-Cookie"] = COOKIE; 
+
+                const res = await fetch(url, { headers });
+                if (!res.ok) throw new Error(`HTTP 报错: ${res.status}`);
+                return await res.json();
+            } catch (error) {
+                alert("请求失败:\n" + error.message);
+                throw error;
+            }
         }
 
         async function apiPost(path, data) {
-            const headers = { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": "Mozilla/5.0 (iPhone..." };
-            if (COOKIE) headers["Cookie"] = COOKIE;
-            const body = new URLSearchParams(data);
-            const res = await fetch(BASE_URL + path, { method: "POST", headers, body });
-            return res.json();
+            try {
+                const headers = { "Content-Type": "application/x-www-form-urlencoded" };
+                // 【核心修改】同理，使用自定义头避开审查
+                if (COOKIE) headers["X-MyTT-Cookie"] = COOKIE;
+                
+                const body = new URLSearchParams(data);
+                const res = await fetch(BASE_URL + path, { method: "POST", headers, body });
+                if (!res.ok) throw new Error(`HTTP 报错: ${res.status}`);
+                return await res.json();
+            } catch (error) {
+                alert("请求失败:\n" + error.message);
+                throw error;
+            }
         }
+
+
+
 
         // ==================== 常用功能 ====================
         const COMMON_ACTIONS = [
