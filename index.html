@@ -57,45 +57,51 @@
         let COOKIE = localStorage.getItem("mytt_cookie") || "";
 
         // ==================== 核心 API 调用 ====================
-        async function apiGet(path, params = {}) {
-            try {
-                const url = new URL(BASE_URL + path);
-                Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
-
-                console.log("🌐 请求:", url.toString());
-
-                const headers = {};
-                if (COOKIE) headers["X-MyTT-Cookie"] = COOKIE; 
-
-                const res = await fetch(url, { headers });
-                console.log("📊 状态:", res.status);
-
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                const data = await res.json();
-                console.log("✅ 返回数据:", data);
-                return data;
-            } catch (error) {
-                console.error("❌ 完整错误:", error);
-                alert("请求失败: " + error.message);
-                throw error;
-            }
-        }
-
         async function apiPost(path, data) {
             try {
-                const headers = { "Content-Type": "application/x-www-form-urlencoded" };
-                if (COOKIE) headers["X-MyTT-Cookie"] = COOKIE;
-                
+                const headers = { 
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1"
+                };
+                if (COOKIE) headers["Cookie"] = COOKIE;
+
+                // ✅ 直接调用 MyTT 官网（不走 Worker）
                 const body = new URLSearchParams(data);
-                const res = await fetch(BASE_URL + path, { method: "POST", headers, body });
-                if (!res.ok) throw new Error(`HTTP 报错: ${res.status}`);
+                const res = await fetch("https://www.mytischtennis.de" + path, { 
+                    method: "POST", 
+                    headers, 
+                    body,
+                    credentials: "include"  // 允许跨域 Cookie
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 return await res.json();
             } catch (error) {
+                console.error("❌ apiPost 错误:", error);
                 alert("请求失败:\n" + error.message);
                 throw error;
             }
         }
 
+        // 同时修改 apiGet
+        async function apiGet(path, params = {}) {
+            try {
+                const url = new URL("https://www.mytischtennis.de" + path);  // ✅ 改这里
+                Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
+
+                const headers = {
+                    "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1"
+                };
+                if (COOKIE) headers["Cookie"] = COOKIE;
+
+                const res = await fetch(url.toString(), { headers, credentials: "include" });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                return await res.json();
+            } catch (error) {
+                console.error("❌ apiGet 错误:", error);
+                alert("请求失败: " + error.message);
+                throw error;
+            }
+        }
         // ==================== 常用功能 ====================
         const COMMON_ACTIONS = [
             { key: "1", label: "搜索球员", func: async () => { const q = prompt("球员姓名，例如 Dang Qiu"); if (!q) return; const data = await apiPost("/api/search/players", {query: q, page:1, pagesize:20}); renderSearchPlayers(data); } },
