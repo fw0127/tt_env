@@ -61,20 +61,25 @@
             try {
                 const url = new URL(BASE_URL + path);
                 Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
-                
+
+                console.log("🌐 请求:", url.toString());
+
                 const headers = {};
-                // 【核心修改】这里不再使用被浏览器禁用的 "Cookie"，而是用我们在 Worker 里约定的 "X-MyTT-Cookie"
                 if (COOKIE) headers["X-MyTT-Cookie"] = COOKIE; 
 
                 const res = await fetch(url, { headers });
-                if (!res.ok) throw new Error(`HTTP 报错: ${res.status}`);
-                return await res.json();
+                console.log("📊 状态:", res.status);
+
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                console.log("✅ 返回数据:", data);
+                return data;
             } catch (error) {
-                alert("请求失败:\n" + error.message);
+                console.error("❌ 完整错误:", error);
+                alert("请求失败: " + error.message);
                 throw error;
             }
         }
-
         async function apiPost(path, data) {
             try {
                 const headers = { "Content-Type": "application/x-www-form-urlencoded" };
