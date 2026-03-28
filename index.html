@@ -41,7 +41,8 @@
                 </div>
             </div>
         </div>
-         <!-- 主菜单 -->
+
+        <!-- 主菜单 -->
         <div class="grid grid-cols-2 gap-3 mb-8" id="menu">
             <!-- 动态生成按钮 -->
         </div>
@@ -79,10 +80,10 @@
                 throw error;
             }
         }
+
         async function apiPost(path, data) {
             try {
                 const headers = { "Content-Type": "application/x-www-form-urlencoded" };
-                // 【核心修改】同理，使用自定义头避开审查
                 if (COOKIE) headers["X-MyTT-Cookie"] = COOKIE;
                 
                 const body = new URLSearchParams(data);
@@ -94,29 +95,6 @@
                 throw error;
             }
         }
-
-        async function testConnection() {
-            const msg = "测试后端连接...";
-            console.log(msg);
-            document.getElementById("result").innerHTML = `<p>${msg}</p>`;
-
-            try {
-                const res = await fetch("https://mytt-proxy.feng.wangs.workers.dev/api/search/players", {
-                    method: "POST",
-                    headers: {"Content-Type": "application/x-www-form-urlencoded"},
-                    body: "query=test&page=1&pagesize=20"
-                });
-
-                if (res.ok) {
-                    const data = await res.json();
-                    document.getElementById("result").innerHTML = `<p style="color: green;">✅ 连接成功！<br>返回数据: ${JSON.stringify(data).slice(0, 100)}</p>`;
-                } else {
-                    document.getElementById("result").innerHTML = `<p style="color: red;">❌ 服务器返回错误: ${res.status}</p>`;
-                }
-            } catch (error) {
-                document.getElementById("result").innerHTML = `<p style="color: red;">❌ 连接失败: ${error.message}</p>`;
-            }
-
 
         // ==================== 常用功能 ====================
         const COMMON_ACTIONS = [
@@ -132,7 +110,7 @@
             { key: "10", label: "比赛 Live", func: async () => { const mid = prompt("Meeting ID，例如 15348642"); if (!mid) return; const data = await apiGet(`/api/meeting/${mid}/live`); renderMeetingLive(data); } },
         ];
 
-        // ==================== 渲染函数（移植原 rich 表格） ====================
+        // ==================== 渲染函数 ====================
         function renderSearchPlayers(data) {
             const results = data.results || [];
             let html = `<h3 class="text-lg font-semibold mb-3">🔍 搜索结果（${data.total_count || 0} 条）</h3>`;
