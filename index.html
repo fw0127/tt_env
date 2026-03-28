@@ -41,6 +41,12 @@
                 </div>
             </div>
         </div>
+        <!-- 在菜单前面添加一个测试按钮 -->
+        <div style="margin-bottom: 20px; padding: 10px; background: #f0f0f0; border-radius: 8px;">
+            <button onclick="testConnection()" style="padding: 10px 20px; background: #ff6b6b; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                🧪 测试连接
+            </button>
+        </div>
 
         <!-- 主菜单 -->
         <div class="grid grid-cols-2 gap-3 mb-8" id="menu">
@@ -96,7 +102,27 @@
             }
         }
 
+        async function testConnection() {
+            const msg = "测试后端连接...";
+            console.log(msg);
+            document.getElementById("result").innerHTML = `<p>${msg}</p>`;
 
+            try {
+                const res = await fetch("https://mytt-proxy.feng.wangs.workers.dev/api/search/players", {
+                    method: "POST",
+                    headers: {"Content-Type": "application/x-www-form-urlencoded"},
+                    body: "query=test&page=1&pagesize=20"
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById("result").innerHTML = `<p style="color: green;">✅ 连接成功！<br>返回数据: ${JSON.stringify(data).slice(0, 100)}</p>`;
+                } else {
+                    document.getElementById("result").innerHTML = `<p style="color: red;">❌ 服务器返回错误: ${res.status}</p>`;
+                }
+            } catch (error) {
+                document.getElementById("result").innerHTML = `<p style="color: red;">❌ 连接失败: ${error.message}</p>`;
+            }
 
 
         // ==================== 常用功能 ====================
