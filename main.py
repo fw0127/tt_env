@@ -1,6 +1,8 @@
 import os
 import re
+import time
 import dotenv
+from datetime import datetime
 from dotenv import load_dotenv
 from pathlib import Path
 from typing import Any, Dict, List
@@ -264,6 +266,7 @@ COMMON_ACTIONS: List[Dict[str, Any]] = [
     {"key": "8", "label": "俱乐部所有球队", "params": [("club_number", "clubNumber，例如 13118"), ("organization", "协会简称，例如 WTTV")], "func": "get_club_teams"},
     {"key": "9", "label": "联赛排名表（API）", "params": [("association", "协会简称"), ("league_id", "league/group id，例如 493079")], "func": "get_league_table_api"},
     {"key": "10", "label": "比赛 Live 状态", "params": [("meeting_id", "比赛 ID，例如 15348642")], "func": "get_meeting_live"},
+    {"key": "w", "label": "⚔️ 作战室 (下一场对手深度分析)", "params": [("my_team_id", "我的 Team ID，例如 2958811")], "func": "run_war_room"},
 ]
 
 
@@ -345,10 +348,107 @@ def run_team_analysis(api: MyTTApi, team_id: str) -> None:
     console.print(table)
 
 
+def _analyze_player_status(api: MyTTApi, nuid: str) -> tuple[str, str]:
+    """分析球员近况 (整合自 war_room.py)"""
+    data = api.get_ttr_history(nuid)
+    if not data or not isinstance(data, dict) or not data.get("event"):
+        return "未知", "N/A"
+
+    events = data["event"][-5:]  # 取最近 5 场
+    total_delta = sum(e.get("ttr_delta", 0) for e in events)
+    wins = sum(1 for e in events if e.get("ttr_delta", 0) > 0)
+
+    if total_delta > 15:
+        status = "[bold green]🔥 极佳[/bold green]"
+    elif total_delta < -10:
+        status = "[bold red]📉 低迷[/bold red]"
+    else:
+        status = "[white]平稳[/white]"
+
+    trend = f"{'+' if total_delta > 0 else ''}{total_delta} (胜{wins}/5)"
+    return status, trend
+
+
+def run_war_room(api: MyTTApi, my_team_id: str) -> None:
+    """深度作战室：自动锁定下一场对手并分析其近况"""
+    console.print(f"\n[bold inverse] 🏟️  正在进入深度作战室 - 我的球队 ID: {my_team_id} [/bold inverse]")
+
+    # 1. 获取赛程并寻找下一场对手
+    with console.status("[bold cyan]正在同步赛程..."):
+        schedule_resp = api.get_team_schedule_api(my_team_id)
+        schedule = schedule_resp.get("data", [])
+
+    if not schedule:
+        console.print("[red]❌ 无法获取赛程，请检查 Token 或 TeamID。[/red]")
+        return
+
+    today = datetime.now().strftime("%Y-%m-%d")
+    target = next((s for s in schedule if (s.get("date") or "")[:10] >= today), None)
+
+    if not target:
+        console.print("[yellow]📅 赛季似乎已结束，没有未来的比赛记录。[/yellow]")
+        return
+
+    opp_id = str(target.get("opponent_team_id"))
+    opp_name = target.get("opponent_team_name")
+    match_date = (target.get("date") or "")[:10]
+
+    console.print(Panel(
+        f"🎯 [bold yellow]下场对手锁定[/bold yellow]: [bold cyan]{opp_name}[/bold cyan] (ID: {opp_id})\n"
+        f"📅 [bold white]比赛日期[/bold white]: {match_date}",
+        border_style="magenta"
+    ))
+
+    # 2. 获取对手阵容
+    with console.status(f"[bold green]正在侦察对手 ({opp_name}) 阵容..."):
+        roster_resp = api.get_team_players(opp_id)
+        roster = roster_resp.get("data", [])
+
+    if not roster:
+        console.print("[red]❌ 无法获取对手阵容。[/red]")
+        return
+
+    table = Table(title=f"⚔️ 对手战力侦察报告", box=box.DOUBLE_EDGE, header_style="bold magenta")
+    table.add_column("排", justify="right", width=4)
+    table.add_column("选手姓名", width=20)
+    table.add_column("实时 TTR", justify="right", width=10)
+    table.add_column("近期状态", justify="center", width=15)
+    table.add_column("5场趋势", justify="left")
+
+    with console.status("[bold green]正在分析对手每一位成员的状态..."):
+        for p in roster:
+            name = f"{p.get('lastname')} {p.get('firstname')}"
+            nuid = str(p.get("internal_id", ""))
+            
+            # 获取实时 TTR
+            p_info = api.get_ttr_player(nuid) if nuid else {}
+            ttr_val = p_info.get("ttr", "N/A")
+            ttr_text, ttr_style = _format_ttr(ttr_val)
+            
+            # 深度分析
+            status, trend = _analyze_player_status(api, nuid) if nuid else ("未知", "N/A")
+            
+            table.add_row(
+                str(p.get("rank", "-")),
+                name[:20],
+                f"[{ttr_style}]{ttr_text}[/{ttr_style}]",
+                status,
+                trend
+            )
+            time.sleep(0.05)  # 频率保护
+
+    console.print(table)
+
+
 def render_ttr_history(api: MyTTApi, nuid: str, clicktt_id: str | None = None) -> None:
     data = api.get_ttr_history(nuid, clicktt_id=clicktt_id)
     if not isinstance(data, dict) or "event" not in data:
-        show_json(data, title="TTR History Raw")
+        err = data.get("error") if isinstance(data, dict) else None
+        if isinstance(err, dict) and err.get("code") == "PT403":
+            console.print(f"[bold red]❌ 未授权: {err.get('message', 'Not authorized')}[/bold red]")
+            console.print("[yellow]💡 该接口需要登录。请在启动时输入有效的 Cookie Token（含 sb-10-auth-token）。[/yellow]")
+        else:
+            show_json(data, title="TTR History Raw")
         return
 
     events = list(reversed(data.get("event", [])))
@@ -423,6 +523,12 @@ def render_search_players(api: MyTTApi, query: str) -> None:
     data = result if isinstance(result, dict) else {}
     items = data.get("results", []) or []
     total = data.get("total_count", 0)
+
+    if not items:
+        console.print(f"[yellow]未能找到与 '{query}' 相关的球员。[/yellow]")
+        if "error" in data:
+            console.print(f"[red]API 错误: {data.get('error')} - {data.get('msg')}[/red]")
+        return
     
     table = Table(title=f"🔍 球员搜索: {query} (共 {total} 条)", box=box.ROUNDED, header_style="bold cyan")
     table.add_column("姓名", width=20)
@@ -579,8 +685,8 @@ def render_club_teams(api: MyTTApi, club_number: str, organization: str) -> None
     table = Table(title=f"🏢 俱乐部球队 (Club: {club_number}, {organization})", box=box.ROUNDED, header_style="bold cyan")
     table.add_column("球队名称", width=25)
     table.add_column("联赛名称", width=30)
-    table.add_column("Team ID", width=12)
-    table.add_column("Group ID", width=12)
+    table.add_column("Team ID", justify="right")
+    table.add_column("Group ID", justify="right")
 
     for t in teams:
         table.add_row(t.get("team_name", "-")[:25], t.get("league_name", "-")[:30], str(t.get("team_id", "-")), str(t.get("group_id", "-")))
@@ -737,6 +843,7 @@ def main() -> None:
         elif f == "get_club_teams": render_club_teams(api, kwargs["club_number"], kwargs["organization"])
         elif f == "get_league_table_api": render_league_table_api(api, kwargs["association"], kwargs["league_id"])
         elif f == "get_meeting_live": render_meeting_live(api, kwargs["meeting_id"])
+        elif f == "run_war_room": run_war_room(api, kwargs["my_team_id"])
         else:
             res = getattr(api, f)(**kwargs)
             show_json(res, title=f"Result: {f}")
