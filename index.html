@@ -52,60 +52,42 @@
     </div>
 
     <script>
-        // ==================== 配置 ====================
-        const BASE_URL = "https://www.mytischtennis.de";
+// ==================== 配置 ====================
+        // 把这里替换成你刚刚在 Cloudflare 得到的专属 Worker 地址！不要在结尾加斜杠！
+        const BASE_URL = "https://mytt-proxy.feng-wangs.workers.dev";
         let COOKIE = localStorage.getItem("mytt_cookie") || "";
 
         // ==================== 核心 API 调用 ====================
-        async function apiPost(path, data) {
+        async function apiGet(path, params = {}) {
             try {
-                const headers = { 
-                    "Content-Type": "application/x-www-form-urlencoded",
-                    "Accept": "application/json"
-                };
-                if (COOKIE) headers["Cookie"] = COOKIE;
+                const url = new URL(BASE_URL + path);
+                Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
+                
+                const headers = {};
+                // 【核心修改】这里不再使用被浏览器禁用的 "Cookie"，而是用我们在 Worker 里约定的 "X-MyTT-Cookie"
+                if (COOKIE) headers["X-MyTT-Cookie"] = COOKIE; 
 
-                const body = new URLSearchParams(data);
-                const res = await fetch(BASE_URL + path, { 
-                    method: "POST", 
-                    headers, 
-                    body,
-                    mode: "cors",  // ✅ 允许跨域
-                    credentials: "omit"  // 不发送跨域 Cookie（避免 CORS 问题）
-                });
-
-                console.log("POST 状态:", res.status);
-
-                if (!res.ok) {
-                    const text = await res.text();
-                    console.error("服务器返回:", text);
-                    throw new Error(`HTTP ${res.status}`);
-                }
-
+                const res = await fetch(url, { headers });
+                if (!res.ok) throw new Error(`HTTP 报错: ${res.status}`);
                 return await res.json();
             } catch (error) {
-                console.error("❌ apiPost 错误:", error);
                 alert("请求失败:\n" + error.message);
                 throw error;
             }
         }
-        // 同时修改 apiGet
-        async function apiGet(path, params = {}) {
+
+        async function apiPost(path, data) {
             try {
-                const url = new URL("https://www.mytischtennis.de" + path);  // ✅ 改这里
-                Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
-
-                const headers = {
-                    "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1"
-                };
-                if (COOKIE) headers["Cookie"] = COOKIE;
-
-                const res = await fetch(url.toString(), { headers, credentials: "include" });
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const headers = { "Content-Type": "application/x-www-form-urlencoded" };
+                // 【核心修改】同理，使用自定义头避开审查
+                if (COOKIE) headers["X-MyTT-Cookie"] = COOKIE;
+                
+                const body = new URLSearchParams(data);
+                const res = await fetch(BASE_URL + path, { method: "POST", headers, body });
+                if (!res.ok) throw new Error(`HTTP 报错: ${res.status}`);
                 return await res.json();
             } catch (error) {
-                console.error("❌ apiGet 错误:", error);
-                alert("请求失败: " + error.message);
+                alert("请求失败:\n" + error.message);
                 throw error;
             }
         }
@@ -123,7 +105,7 @@
             { key: "10", label: "比赛 Live", func: async () => { const mid = prompt("Meeting ID，例如 15348642"); if (!mid) return; const data = await apiGet(`/api/meeting/${mid}/live`); renderMeetingLive(data); } },
         ];
 
-        // ==================== 渲染函数 ====================
+        // ==================== 渲染函数（移植原 rich 表格） ====================
         function renderSearchPlayers(data) {
             const results = data.results || [];
             let html = `<h3 class="text-lg font-semibold mb-3">🔍 搜索结果（${data.total_count || 0} 条）</h3>`;
