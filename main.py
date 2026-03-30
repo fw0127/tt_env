@@ -323,10 +323,26 @@ def show_json(data: Any, title: str = "Result Data") -> None:
 
 
 def run_team_analysis(api: MyTTApi, team_id: str) -> None:
-    roster = api.get_team_players(team_id).get("data", [])
-    if not roster:
+    raw_roster = api.get_team_players(team_id).get("data", [])
+    if not raw_roster:
         console.print("[red]未获取到球队阵容，请检查 teamId。[/red]")
         return
+
+    # 去重
+    roster_map = {}
+    for p in raw_roster:
+        nuid = p.get("internal_id")
+        if nuid:
+            roster_map[nuid] = p
+    
+    # 只保留本赛季
+    roster = [p for p in roster_map.values() if p.get("rank") and str(p.get("rank"))[0].isdigit()]
+    
+    # 按排名重新排序
+    try:
+        roster.sort(key=lambda x: float(re.findall(r"\d+\.?\d*", str(x.get("rank", "999")))[0]))
+    except:
+        pass
 
     table = Table(title=f"🔍 球队分析 (TeamID: {team_id})", box=box.ROUNDED, header_style="bold magenta")
     table.add_column("排名", style="cyan", justify="right", width=6)
@@ -402,7 +418,23 @@ def run_war_room(api: MyTTApi, my_team_id: str) -> None:
     # 2. 获取对手阵容
     with console.status(f"[bold green]正在侦察对手 ({opp_name}) 阵容..."):
         roster_resp = api.get_team_players(opp_id)
-        roster = roster_resp.get("data", [])
+        raw_roster = roster_resp.get("data", []) or []
+        
+        # 去重：如果同一个 internal_id 出现多次，保留最后一个（下半赛季 RR 数据）
+        roster_map = {}
+        for p in raw_roster:
+            nuid = p.get("internal_id")
+            if nuid:
+                roster_map[nuid] = p
+        
+        # 只保留本赛季（有排名且排名以数字开头）的队员
+        roster = [p for p in roster_map.values() if p.get("rank") and str(p.get("rank"))[0].isdigit()]
+        
+        # 重新排序
+        try:
+            roster.sort(key=lambda x: float(re.findall(r"\d+\.?\d*", str(x.get("rank", "999")))[0]))
+        except:
+            pass
 
     if not roster:
         console.print("[red]❌ 无法获取对手阵容。[/red]")
@@ -648,8 +680,24 @@ def render_ttr_player(api: MyTTApi, nuid: str) -> None:
 
 def render_team_players(api: MyTTApi, team_id: str) -> None:
     data = api.get_team_players(team_id)
-    roster = data.get("data", []) or []
+    raw_roster = data.get("data", []) or []
+
+    # 1. 去重：如果同一个 internal_id 出现多次，保留最后一个（通常是下半赛季 RR 的数据）
+    roster_map = {}
+    for p in raw_roster:
+        nuid = p.get("internal_id")
+        if nuid:
+            roster_map[nuid] = p
     
+    # 2. 转换回列表，并只保留本赛季有数字排名的队员
+    roster = [p for p in roster_map.values() if p.get("rank") and str(p.get("rank"))[0].isdigit()]
+    
+    # 3. 按排名排序
+    try:
+        roster.sort(key=lambda x: float(re.findall(r"\d+\.?\d*", str(x.get("rank", "999")))[0]))
+    except:
+        pass
+
     table = Table(title=f"📋 球队阵容 (TeamID: {team_id})", box=box.ROUNDED, header_style="bold cyan")
     table.add_column("排名", justify="right", width=6)
     table.add_column("姓名", width=25)
