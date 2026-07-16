@@ -1,0 +1,18 @@
+# 敏感凭证与本地数据（切勿提交）
+.env
+env
+config.yaml
+a
+mytt_cache.db
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+
+# 本地工具 / IDE
+.claude/
+.cursor/
+
+# 系统
+.DS_Store
