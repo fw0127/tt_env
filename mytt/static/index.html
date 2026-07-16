@@ -26,6 +26,10 @@
   }
   #tokenBtn.ok { border-color: var(--green); color: var(--green); }
   #cacheBtn.live { border-color: var(--accent2); color: var(--accent2); }
+  #lang {
+    background: var(--panel2); color: var(--text); border: 1px solid var(--line);
+    border-radius: 10px; padding: 7px 10px; cursor: pointer; font-size: 13px;
+  }
 
   nav { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
   nav button {
@@ -119,41 +123,46 @@
 <body>
 <div class="wrap">
   <header>
-    <h1>🏓 MyTT 助手<small>Web 版</small></h1>
+    <h1>🏓 <span data-i18n="app_title">MyTT 助手</span><small data-i18n="app_sub">Web 版</small></h1>
     <div class="row" style="gap:8px">
+      <select id="lang" onchange="setLang(this.value)">
+        <option value="zh">中文</option>
+        <option value="de">Deutsch</option>
+        <option value="en">English</option>
+      </select>
       <button id="cacheBtn" onclick="openCache()">💾 缓存</button>
       <button id="tokenBtn" onclick="openToken()">🔑 Token</button>
     </div>
   </header>
 
   <nav id="nav">
-    <button data-tab="search" class="active">🔍 搜索</button>
-    <button data-tab="player">👤 球员</button>
-    <button data-tab="team">📋 球队</button>
-    <button data-tab="war">⚔️ 作战室</button>
-    <button data-tab="more">🏆 更多</button>
+    <button data-tab="search" class="active" data-i18n="nav_search">🔍 搜索</button>
+    <button data-tab="player" data-i18n="nav_player">👤 球员</button>
+    <button data-tab="team" data-i18n="nav_team">📋 球队</button>
+    <button data-tab="war" data-i18n="nav_war">⚔️ 作战室</button>
+    <button data-tab="more" data-i18n="nav_more">🏆 更多</button>
   </nav>
 
   <section id="tab-search" class="active">
     <div class="card">
       <div class="row">
         <select id="searchType" style="flex:0 0 110px">
-          <option value="players">球员</option>
-          <option value="clubs">俱乐部</option>
+          <option value="players" data-i18n="opt_players">球员</option>
+          <option value="clubs" data-i18n="opt_clubs">俱乐部</option>
         </select>
-        <input id="searchQ" data-history="search" autocomplete="off" placeholder="例如 Dang Qiu / Borussia" onkeydown="if(event.key==='Enter')doSearch()">
-        <button class="btn" onclick="doSearch()">搜索</button>
+        <input id="searchQ" data-history="search" autocomplete="off" data-i18n-ph="ph_search" placeholder="例如 Dang Qiu / Borussia" onkeydown="if(event.key==='Enter')doSearch()">
+        <button class="btn" onclick="doSearch()" data-i18n="btn_search">搜索</button>
       </div>
-      <p class="hint">搜索球员后点击结果行可查看 TTR 历史或所属俱乐部球队。</p>
+      <p class="hint" data-i18n="hint_search">搜索球员后点击结果行可查看 TTR 历史或所属俱乐部球队。</p>
     </div>
   </section>
 
   <section id="tab-player">
     <div class="card">
       <div class="row">
-        <input id="playerNuid" data-history="player" autocomplete="off" placeholder="球员 NUID / personId，例如 NU7535" onkeydown="if(event.key==='Enter')doPlayerHistory()">
-        <button class="btn alt" onclick="doPlayerTtr()">实时 TTR</button>
-        <button class="btn" onclick="doPlayerHistory()">TTR 历史</button>
+        <input id="playerNuid" data-history="player" autocomplete="off" data-i18n-ph="ph_player" placeholder="球员 NUID / personId，例如 NU7535" onkeydown="if(event.key==='Enter')doPlayerHistory()">
+        <button class="btn alt" onclick="doPlayerTtr()" data-i18n="btn_live_ttr">实时 TTR</button>
+        <button class="btn" onclick="doPlayerHistory()" data-i18n="btn_ttr_history">TTR 历史</button>
       </div>
     </div>
   </section>
@@ -161,13 +170,13 @@
   <section id="tab-team">
     <div class="card">
       <div class="row">
-        <input id="teamId" data-history="team" autocomplete="off" placeholder="Team ID，例如 2953148" onkeydown="if(event.key==='Enter')doTeamAnalysis()">
-        <input id="teamSeason" placeholder="赛季 (默认 25--26)" style="flex:0 0 150px">
+        <input id="teamId" data-history="team" autocomplete="off" data-i18n-ph="ph_team" placeholder="Team ID，例如 2953148" onkeydown="if(event.key==='Enter')doTeamAnalysis()">
+        <input id="teamSeason" data-i18n-ph="ph_season" placeholder="赛季 (默认 25--26)" style="flex:0 0 150px">
       </div>
       <div class="row" style="margin-top:10px">
-        <button class="btn alt" onclick="doTeamPlayers()">阵容</button>
-        <button class="btn" onclick="doTeamAnalysis()">分析 (含实时TTR)</button>
-        <button class="btn alt" onclick="doTeamSchedule()">赛程</button>
+        <button class="btn alt" onclick="doTeamPlayers()" data-i18n="btn_roster">阵容</button>
+        <button class="btn" onclick="doTeamAnalysis()" data-i18n="btn_analysis">分析 (含实时TTR)</button>
+        <button class="btn alt" onclick="doTeamSchedule()" data-i18n="btn_schedule">赛程</button>
       </div>
     </div>
   </section>
@@ -175,35 +184,35 @@
   <section id="tab-war">
     <div class="card">
       <div class="row">
-        <input id="warTeamId" data-history="war" autocomplete="off" placeholder="我的 Team ID，例如 2958811" onkeydown="if(event.key==='Enter')doWarRoom()">
-        <button class="btn war" onclick="doWarRoom()">⚔️ 进入作战室</button>
+        <input id="warTeamId" data-history="war" autocomplete="off" data-i18n-ph="ph_war" placeholder="我的 Team ID，例如 2958811" onkeydown="if(event.key==='Enter')doWarRoom()">
+        <button class="btn war" onclick="doWarRoom()" data-i18n="btn_enter_war">⚔️ 进入作战室</button>
       </div>
-      <p class="hint">自动锁定下一场对手，逐人分析实时 TTR 与近 5 场状态，需要 1-2 分钟。</p>
+      <p class="hint" data-i18n="hint_war">自动锁定下一场对手，逐人分析实时 TTR 与近 5 场状态，需要 1-2 分钟。</p>
     </div>
   </section>
 
   <section id="tab-more">
     <div class="card">
-      <div class="panel-title">🏢 俱乐部所有球队</div>
+      <div class="panel-title" data-i18n="more_club">🏢 俱乐部所有球队</div>
       <div class="row">
-        <input id="clubNumber" data-history="clubNumber" autocomplete="off" placeholder="clubNumber，例如 13118">
-        <input id="clubOrg" placeholder="协会简称，例如 WTTV" style="flex:0 0 140px">
-        <button class="btn" onclick="doClubTeams()">查询</button>
+        <input id="clubNumber" data-history="clubNumber" autocomplete="off" data-i18n-ph="ph_club_number" placeholder="clubNumber，例如 13118">
+        <input id="clubOrg" data-i18n-ph="ph_club_org" placeholder="协会简称，例如 WTTV" style="flex:0 0 140px">
+        <button class="btn" onclick="doClubTeams()" data-i18n="btn_query">查询</button>
       </div>
     </div>
     <div class="card">
-      <div class="panel-title">🏆 联赛排名表</div>
+      <div class="panel-title" data-i18n="more_league">🏆 联赛排名表</div>
       <div class="row">
-        <input id="leagueAssoc" placeholder="协会简称，例如 WTTV" style="flex:0 0 160px">
-        <input id="leagueId" data-history="leagueId" autocomplete="off" placeholder="league/group id，例如 493079">
-        <button class="btn" onclick="doLeagueTable()">查询</button>
+        <input id="leagueAssoc" data-i18n-ph="ph_league_assoc" placeholder="协会简称，例如 WTTV" style="flex:0 0 160px">
+        <input id="leagueId" data-history="leagueId" autocomplete="off" data-i18n-ph="ph_league_id" placeholder="league/group id，例如 493079">
+        <button class="btn" onclick="doLeagueTable()" data-i18n="btn_query">查询</button>
       </div>
     </div>
     <div class="card">
-      <div class="panel-title">🔴 比赛 Live 状态</div>
+      <div class="panel-title" data-i18n="more_live">🔴 比赛 Live 状态</div>
       <div class="row">
-        <input id="meetingId" data-history="meeting" autocomplete="off" placeholder="比赛 ID，例如 15348642">
-        <button class="btn" onclick="doMeetingLive()">查询</button>
+        <input id="meetingId" data-history="meeting" autocomplete="off" data-i18n-ph="ph_meeting" placeholder="比赛 ID，例如 15348642">
+        <button class="btn" onclick="doMeetingLive()" data-i18n="btn_query">查询</button>
       </div>
     </div>
   </section>
@@ -216,31 +225,31 @@
 
 <div id="cacheModal" class="overlay">
   <div class="box">
-    <h3>💾 本地缓存</h3>
-    <p id="cacheInfo" class="hint" style="margin-top:0">加载中...</p>
+    <h3 data-i18n="cache_title">💾 本地缓存</h3>
+    <p id="cacheInfo" class="hint" style="margin-top:0" data-i18n="cache_loading">加载中...</p>
     <label class="hint" style="display:flex;align-items:center;gap:8px;margin-top:14px;cursor:pointer">
       <input type="checkbox" id="forceLive" style="flex:0;min-width:auto" onchange="updateCacheBtn()">
-      强制实时：本页会话内跳过缓存，总是上网获取
+      <span data-i18n="cache_force_label">强制实时：本页会话内跳过缓存，总是上网获取</span>
     </label>
-    <p class="hint">默认优先读本地缓存：搜索缓存 30 天、实时 TTR 1 小时、TTR 历史 6 小时、其余 1 天；Live 比分永不缓存。</p>
+    <p class="hint" data-i18n="cache_hint">默认优先读本地缓存：搜索缓存 30 天、实时 TTR 1 小时、TTR 历史 6 小时、其余 1 天；Live 比分永不缓存。</p>
     <div class="row" style="margin-top:16px">
-      <button class="btn alt" style="flex:1" onclick="clearCache()">🗑 清空缓存</button>
-      <button class="btn" style="flex:1" onclick="closeCache()">关闭</button>
+      <button class="btn alt" style="flex:1" onclick="clearCache()" data-i18n="btn_clear_cache">🗑 清空缓存</button>
+      <button class="btn" style="flex:1" onclick="closeCache()" data-i18n="btn_close">关闭</button>
     </div>
   </div>
 </div>
 
 <div id="modal" class="overlay">
   <div class="box">
-    <h3>设置 Cookie Token（可选）</h3>
-    <button class="btn war" style="width:100%" onclick="autoToken()">🪄 自动获取（续期 / 从本机浏览器导入）</button>
+    <h3 data-i18n="token_title">设置 Cookie Token（可选）</h3>
+    <button class="btn war" style="width:100%" onclick="autoToken()" data-i18n="btn_auto_token">🪄 自动获取（续期 / 从本机浏览器导入）</button>
     <p id="tokenStatus" class="hint"></p>
-    <p class="hint">Token 快过期时服务会自动续期并写回 .env。首次使用请先在本机浏览器登录
+    <p class="hint" data-i18n="token_hint">Token 快过期时服务会自动续期并写回 .env。首次使用请先在本机浏览器登录
       mytischtennis.de，再点上面的按钮一键导入（读取 Chrome 加密 Cookie 时系统会请求钥匙串授权）。也可手动粘贴：</p>
     <input id="tokenInput" placeholder="sb-10-auth-token=xxx; ..." style="width:100%;margin-top:8px">
     <div class="row" style="margin-top:16px">
-      <button class="btn" style="flex:1" onclick="saveToken()">保存</button>
-      <button class="btn alt" style="flex:1" onclick="closeToken()">取消</button>
+      <button class="btn" style="flex:1" onclick="saveToken()" data-i18n="btn_save">保存</button>
+      <button class="btn alt" style="flex:1" onclick="closeToken()" data-i18n="btn_cancel">取消</button>
     </div>
   </div>
 </div>
@@ -249,6 +258,236 @@
 const $ = id => document.getElementById(id);
 const result = $('result');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+// ==================== 多语言 ====================
+const I18N = {
+  zh: {
+    app_title: 'MyTT 助手', app_sub: 'Web 版',
+    nav_search: '🔍 搜索', nav_player: '👤 球员', nav_team: '📋 球队', nav_war: '⚔️ 作战室', nav_more: '🏆 更多',
+    opt_players: '球员', opt_clubs: '俱乐部',
+    ph_search: '例如 Dang Qiu / Borussia', btn_search: '搜索',
+    hint_search: '搜索球员后点击结果行可查看 TTR 历史或所属俱乐部球队。',
+    ph_player: '球员 NUID / personId，例如 NU7535', btn_live_ttr: '实时 TTR', btn_ttr_history: 'TTR 历史',
+    ph_team: 'Team ID，例如 2953148', ph_season: '赛季 (默认 25--26)',
+    btn_roster: '阵容', btn_analysis: '分析 (含实时TTR)', btn_schedule: '赛程',
+    ph_war: '我的 Team ID，例如 2958811', btn_enter_war: '⚔️ 进入作战室',
+    hint_war: '自动锁定下一场对手，逐人分析实时 TTR 与近 5 场状态，需要 1-2 分钟。',
+    more_club: '🏢 俱乐部所有球队', ph_club_number: 'clubNumber，例如 13118', ph_club_org: '协会简称，例如 WTTV', btn_query: '查询',
+    more_league: '🏆 联赛排名表', ph_league_assoc: '协会简称，例如 WTTV', ph_league_id: 'league/group id，例如 493079',
+    more_live: '🔴 比赛 Live 状态', ph_meeting: '比赛 ID，例如 15348642',
+    cache_title: '💾 本地缓存', cache_loading: '加载中...',
+    cache_force_label: '强制实时：本页会话内跳过缓存，总是上网获取',
+    cache_hint: '默认优先读本地缓存：搜索缓存 30 天、实时 TTR 1 小时、TTR 历史 6 小时、其余 1 天；Live 比分永不缓存。',
+    btn_clear_cache: '🗑 清空缓存', btn_close: '关闭',
+    cache_stats: '已缓存 {count} 条请求结果，占用 {kb} KB（mytt_cache.db）',
+    cache_disabled: '缓存已通过 MYTT_NO_CACHE 环境变量停用', cache_read_fail: '无法读取缓存状态',
+    cache_cleared: '已清空 {n} 条缓存。',
+    btn_cache: '💾 缓存', btn_cache_live: '⚡ 实时',
+    token_title: '设置 Cookie Token（可选）', btn_auto_token: '🪄 自动获取（续期 / 从本机浏览器导入）',
+    token_hint: 'Token 快过期时服务会自动续期并写回 .env。首次使用请先在本机浏览器登录 mytischtennis.de，再点上面的按钮一键导入（读取 Chrome 加密 Cookie 时系统会请求钥匙串授权）。也可手动粘贴：',
+    btn_save: '保存', btn_cancel: '取消',
+    token_none: '当前未设置 Token。', token_no_exp: '已设置 Token（无法解析过期时间）。',
+    token_valid: 'Token 有效，约 {n} 分钟后过期（到期会自动续期）。',
+    token_expired: 'Token 已过期，点上方"自动获取"续期或重新导入。',
+    token_btn: '🔑 Token', token_btn_ok: '🔑 Token ✓',
+    auto_trying: '⏳ 正在尝试续期 / 读取本机浏览器 Cookie（可能弹出钥匙串授权）...',
+    auto_valid: '✅ 现有 Token 仍有效，无需更换。', auto_refreshed: '✅ 已自动续期，并写回 .env。',
+    auto_browser: '✅ 已从本机浏览器导入登录状态。', auto_browser_refreshed: '✅ 已从本机浏览器导入并续期。',
+    auto_manual: '❌ 自动获取失败：请先在本机浏览器登录 mytischtennis.de 再试，或手动粘贴 Cookie。',
+    req_failed: '❌ 请求失败: ',
+    hist_search: '🕘 历史搜索', clear: '清空',
+    searching_players: '正在搜索球员 "{q}"...', no_players: '未能找到与 "{q}" 相关的球员。',
+    search_players_title: '🔍 球员搜索: {q} (共 {count} 条，点击行查看详情)',
+    th_name: '姓名', th_club: '俱乐部', th_live_ttr: '实时TTR', th_nuid: 'NUID/ID',
+    login_required: '需登录可见',
+    btn_hist_short: '📈 TTR 历史', no_nuid: '无 NUID，无法查历史', btn_club_teams: '🏢 俱乐部球队',
+    searching_clubs: '正在搜索俱乐部 "{q}"...', no_club: '未找到俱乐部 "{q}"。',
+    search_clubs_title: '🔍 俱乐部搜索: {q} (点击行查看球队)',
+    th_club_name: '俱乐部名称', th_club_nr: 'Club Nr', th_assoc: '协会',
+    finding_club: '正在查找俱乐部 "{name}"...', club_incomplete: '未找到俱乐部 "{name}" 的完整信息。',
+    loading_ttr: '正在获取实时 TTR...', player_info_title: '👤 球员信息: {nuid}', ttr_label: '实时 TTR',
+    loading_history: '正在获取 TTR 历史...',
+    unauthorized: '未授权：该接口需要登录，请设置有效的 Cookie Token。', no_history: '未获取到历史数据: {info}',
+    history_title: '📈 {name} · 当前 TTR {ttr} · 最近 {count} 场', unknown: '未知',
+    th_date: '日期', th_delta: '变动', th_after: '赛后', th_score: '比分', th_opponent: '对手 (TTR)',
+    loading_roster: '正在获取阵容...', no_roster: '未获取到球队阵容，请检查 teamId。',
+    roster_title: '📋 球队阵容 (TeamID: {id})', th_rank: '排名', th_internal_id: 'Internal ID',
+    analyzing_team: '正在分析球队（逐人获取实时 TTR，稍等）...', analysis_title: '🔍 球队分析 (TeamID: {id})',
+    loading_schedule: '正在获取赛程...', no_schedule: '未获取到赛程。',
+    schedule_title: '📅 球队赛程 (TeamID: {id}, {season})', th_opp_name: '对手名称', th_opp_teamid: '对手 TeamID',
+    war_loading: '🏟️ 正在同步赛程、侦察对手阵容并逐人分析（可能需要一分钟）...',
+    war_locked: '🎯 下场对手锁定:', war_date: '📅 比赛日期:', war_report: '⚔️ 对手战力侦察报告',
+    th_rank_short: '排', th_player_name: '选手姓名', th_recent: '近期状态', th_trend: '5场趋势',
+    form_hot: '🔥 极佳', form_cold: '📉 低迷', form_flat: '平稳', form_trend: '(胜{wins}/5)',
+    loading_club_teams: '正在查询俱乐部球队...', no_club_teams: '未获取到俱乐部球队。',
+    club_teams_title: '🏢 俱乐部球队 (Club: {club}, {org})',
+    th_team_name: '球队名称', th_league_name: '联赛名称',
+    loading_league: '正在获取联赛排名...', no_league: '未获取到排名表。',
+    league_title: '🏆 联赛排名表 (League: {id})',
+    th_team: '球队', th_played: '场', th_wdl: '胜-平-负', th_games: '球数', th_points: '积分',
+    loading_live: '正在获取 Live 数据...', no_live_detail: '暂无详细场次数据。',
+    th_match_no: '场次', th_matchup: '对阵', th_state: '状态', vs: 'vs',
+  },
+  de: {
+    app_title: 'MyTT Assistent', app_sub: 'Web',
+    nav_search: '🔍 Suche', nav_player: '👤 Spieler', nav_team: '📋 Team', nav_war: '⚔️ Gegneranalyse', nav_more: '🏆 Mehr',
+    opt_players: 'Spieler', opt_clubs: 'Vereine',
+    ph_search: 'z.B. Dang Qiu / Borussia', btn_search: 'Suchen',
+    hint_search: 'Nach der Spielersuche auf eine Zeile klicken für TTR-Verlauf oder Vereinsteams.',
+    ph_player: 'Spieler-NUID / personId, z.B. NU7535', btn_live_ttr: 'Live-TTR', btn_ttr_history: 'TTR-Verlauf',
+    ph_team: 'Team-ID, z.B. 2953148', ph_season: 'Saison (Standard 25--26)',
+    btn_roster: 'Kader', btn_analysis: 'Analyse (mit Live-TTR)', btn_schedule: 'Spielplan',
+    ph_war: 'Meine Team-ID, z.B. 2958811', btn_enter_war: '⚔️ Analyse starten',
+    hint_war: 'Ermittelt automatisch den nächsten Gegner und analysiert jeden Spieler (Live-TTR & letzte 5 Spiele). Dauert 1-2 Min.',
+    more_club: '🏢 Alle Teams des Vereins', ph_club_number: 'clubNumber, z.B. 13118', ph_club_org: 'Verband, z.B. WTTV', btn_query: 'Abfragen',
+    more_league: '🏆 Ligatabelle', ph_league_assoc: 'Verband, z.B. WTTV', ph_league_id: 'league/group id, z.B. 493079',
+    more_live: '🔴 Live-Spielstand', ph_meeting: 'Spiel-ID, z.B. 15348642',
+    cache_title: '💾 Lokaler Cache', cache_loading: 'Wird geladen...',
+    cache_force_label: 'Immer live: Cache in dieser Sitzung überspringen, immer neu abrufen',
+    cache_hint: 'Standardmäßig zuerst aus dem Cache: Suche 30 Tage, Live-TTR 1 Std., TTR-Verlauf 6 Std., sonst 1 Tag; Live-Spielstand nie.',
+    btn_clear_cache: '🗑 Cache leeren', btn_close: 'Schließen',
+    cache_stats: '{count} Anfragen im Cache, {kb} KB (mytt_cache.db)',
+    cache_disabled: 'Cache über MYTT_NO_CACHE deaktiviert', cache_read_fail: 'Cache-Status nicht lesbar',
+    cache_cleared: '{n} Cache-Einträge geleert.',
+    btn_cache: '💾 Cache', btn_cache_live: '⚡ Live',
+    token_title: 'Cookie-Token einstellen (optional)', btn_auto_token: '🪄 Automatisch holen (erneuern / aus Browser)',
+    token_hint: 'Der Token wird bei Ablauf automatisch erneuert und in .env geschrieben. Bitte zuerst im lokalen Browser bei mytischtennis.de anmelden, dann oben klicken (beim Lesen verschlüsselter Chrome-Cookies fragt das System nach Schlüsselbund-Zugriff). Oder manuell einfügen:',
+    btn_save: 'Speichern', btn_cancel: 'Abbrechen',
+    token_none: 'Kein Token gesetzt.', token_no_exp: 'Token gesetzt (Ablaufzeit nicht lesbar).',
+    token_valid: 'Token gültig, läuft in ca. {n} Min. ab (wird automatisch erneuert).',
+    token_expired: 'Token abgelaufen, oben "Automatisch holen" zum Erneuern klicken.',
+    token_btn: '🔑 Token', token_btn_ok: '🔑 Token ✓',
+    auto_trying: '⏳ Erneuere / lese Browser-Cookie (evtl. Schlüsselbund-Abfrage)...',
+    auto_valid: '✅ Aktueller Token noch gültig.', auto_refreshed: '✅ Automatisch erneuert und in .env gespeichert.',
+    auto_browser: '✅ Anmeldung aus dem Browser importiert.', auto_browser_refreshed: '✅ Aus Browser importiert und erneuert.',
+    auto_manual: '❌ Fehlgeschlagen: bitte zuerst im Browser bei mytischtennis.de anmelden oder Cookie manuell einfügen.',
+    req_failed: '❌ Anfrage fehlgeschlagen: ',
+    hist_search: '🕘 Suchverlauf', clear: 'Leeren',
+    searching_players: 'Suche Spieler "{q}"...', no_players: 'Keine Spieler zu "{q}" gefunden.',
+    search_players_title: '🔍 Spielersuche: {q} ({count} Treffer, Zeile anklicken für Details)',
+    th_name: 'Name', th_club: 'Verein', th_live_ttr: 'Live-TTR', th_nuid: 'NUID/ID',
+    login_required: 'Anmeldung nötig',
+    btn_hist_short: '📈 TTR-Verlauf', no_nuid: 'Keine NUID, kein Verlauf', btn_club_teams: '🏢 Vereinsteams',
+    searching_clubs: 'Suche Verein "{q}"...', no_club: 'Verein "{q}" nicht gefunden.',
+    search_clubs_title: '🔍 Vereinssuche: {q} (Zeile anklicken für Teams)',
+    th_club_name: 'Vereinsname', th_club_nr: 'Vereinsnr.', th_assoc: 'Verband',
+    finding_club: 'Suche Verein "{name}"...', club_incomplete: 'Keine vollständigen Daten für Verein "{name}".',
+    loading_ttr: 'Live-TTR wird geladen...', player_info_title: '👤 Spieler: {nuid}', ttr_label: 'Live-TTR',
+    loading_history: 'TTR-Verlauf wird geladen...',
+    unauthorized: 'Nicht autorisiert: Anmeldung erforderlich, bitte gültigen Cookie-Token setzen.', no_history: 'Kein Verlauf erhalten: {info}',
+    history_title: '📈 {name} · Aktuelle TTR {ttr} · Letzte {count} Spiele', unknown: 'Unbekannt',
+    th_date: 'Datum', th_delta: 'Änd.', th_after: 'Nachher', th_score: 'Satz', th_opponent: 'Gegner (TTR)',
+    loading_roster: 'Kader wird geladen...', no_roster: 'Kein Kader erhalten, bitte Team-ID prüfen.',
+    roster_title: '📋 Kader (Team-ID: {id})', th_rank: 'Rang', th_internal_id: 'Interne ID',
+    analyzing_team: 'Team wird analysiert (Live-TTR pro Spieler, bitte warten)...', analysis_title: '🔍 Teamanalyse (Team-ID: {id})',
+    loading_schedule: 'Spielplan wird geladen...', no_schedule: 'Kein Spielplan erhalten.',
+    schedule_title: '📅 Spielplan (Team-ID: {id}, {season})', th_opp_name: 'Gegner', th_opp_teamid: 'Gegner Team-ID',
+    war_loading: '🏟️ Spielplan wird abgeglichen, Gegnerkader analysiert (kann eine Minute dauern)...',
+    war_locked: '🎯 Nächster Gegner:', war_date: '📅 Spieltag:', war_report: '⚔️ Gegner-Stärkeanalyse',
+    th_rank_short: 'Rg', th_player_name: 'Spielername', th_recent: 'Aktuelle Form', th_trend: 'Trend 5 Sp.',
+    form_hot: '🔥 Top', form_cold: '📉 Schwach', form_flat: 'Stabil', form_trend: '(S{wins}/5)',
+    loading_club_teams: 'Vereinsteams werden abgefragt...', no_club_teams: 'Keine Vereinsteams erhalten.',
+    club_teams_title: '🏢 Vereinsteams (Verein: {club}, {org})',
+    th_team_name: 'Teamname', th_league_name: 'Liga',
+    loading_league: 'Ligatabelle wird geladen...', no_league: 'Keine Tabelle erhalten.',
+    league_title: '🏆 Ligatabelle (Liga: {id})',
+    th_team: 'Team', th_played: 'Sp', th_wdl: 'S-U-N', th_games: 'Sätze', th_points: 'Punkte',
+    loading_live: 'Live-Daten werden geladen...', no_live_detail: 'Keine Spieldetails verfügbar.',
+    th_match_no: 'Nr.', th_matchup: 'Begegnung', th_state: 'Status', vs: 'vs',
+  },
+  en: {
+    app_title: 'MyTT Assistant', app_sub: 'Web',
+    nav_search: '🔍 Search', nav_player: '👤 Player', nav_team: '📋 Team', nav_war: '⚔️ War Room', nav_more: '🏆 More',
+    opt_players: 'Players', opt_clubs: 'Clubs',
+    ph_search: 'e.g. Dang Qiu / Borussia', btn_search: 'Search',
+    hint_search: 'After searching players, click a row to view TTR history or club teams.',
+    ph_player: 'Player NUID / personId, e.g. NU7535', btn_live_ttr: 'Live TTR', btn_ttr_history: 'TTR History',
+    ph_team: 'Team ID, e.g. 2953148', ph_season: 'Season (default 25--26)',
+    btn_roster: 'Roster', btn_analysis: 'Analysis (with live TTR)', btn_schedule: 'Schedule',
+    ph_war: 'My Team ID, e.g. 2958811', btn_enter_war: '⚔️ Enter War Room',
+    hint_war: 'Auto-locks the next opponent and analyses each player (live TTR & last 5 games). Takes 1-2 min.',
+    more_club: '🏢 All Club Teams', ph_club_number: 'clubNumber, e.g. 13118', ph_club_org: 'Association, e.g. WTTV', btn_query: 'Query',
+    more_league: '🏆 League Table', ph_league_assoc: 'Association, e.g. WTTV', ph_league_id: 'league/group id, e.g. 493079',
+    more_live: '🔴 Live Match Status', ph_meeting: 'Meeting ID, e.g. 15348642',
+    cache_title: '💾 Local Cache', cache_loading: 'Loading...',
+    cache_force_label: 'Force live: skip cache this session, always fetch from server',
+    cache_hint: 'Reads local cache first by default: search 30 days, live TTR 1h, TTR history 6h, others 1 day; live scores never cached.',
+    btn_clear_cache: '🗑 Clear Cache', btn_close: 'Close',
+    cache_stats: '{count} cached responses, {kb} KB (mytt_cache.db)',
+    cache_disabled: 'Cache disabled via MYTT_NO_CACHE env var', cache_read_fail: 'Cannot read cache status',
+    cache_cleared: 'Cleared {n} cache entries.',
+    btn_cache: '💾 Cache', btn_cache_live: '⚡ Live',
+    token_title: 'Set Cookie Token (optional)', btn_auto_token: '🪄 Auto-fetch (refresh / import from browser)',
+    token_hint: 'The token is auto-refreshed on expiry and written back to .env. First log in to mytischtennis.de in your local browser, then click above to import (reading encrypted Chrome cookies triggers a keychain prompt). Or paste manually:',
+    btn_save: 'Save', btn_cancel: 'Cancel',
+    token_none: 'No token set.', token_no_exp: 'Token set (expiry not parseable).',
+    token_valid: 'Token valid, expires in ~{n} min (auto-refreshes on expiry).',
+    token_expired: 'Token expired, click "Auto-fetch" above to refresh or re-import.',
+    token_btn: '🔑 Token', token_btn_ok: '🔑 Token ✓',
+    auto_trying: '⏳ Trying to refresh / read local browser cookie (may prompt keychain)...',
+    auto_valid: '✅ Current token still valid.', auto_refreshed: '✅ Auto-refreshed and written to .env.',
+    auto_browser: '✅ Imported login from local browser.', auto_browser_refreshed: '✅ Imported from browser and refreshed.',
+    auto_manual: '❌ Auto-fetch failed: log in to mytischtennis.de in your browser first, or paste a cookie manually.',
+    req_failed: '❌ Request failed: ',
+    hist_search: '🕘 Search History', clear: 'Clear',
+    searching_players: 'Searching players "{q}"...', no_players: 'No players found for "{q}".',
+    search_players_title: '🔍 Player search: {q} ({count} results, click a row for details)',
+    th_name: 'Name', th_club: 'Club', th_live_ttr: 'Live TTR', th_nuid: 'NUID/ID',
+    login_required: 'login required',
+    btn_hist_short: '📈 TTR History', no_nuid: 'No NUID, cannot show history', btn_club_teams: '🏢 Club Teams',
+    searching_clubs: 'Searching clubs "{q}"...', no_club: 'Club "{q}" not found.',
+    search_clubs_title: '🔍 Club search: {q} (click a row for teams)',
+    th_club_name: 'Club Name', th_club_nr: 'Club Nr', th_assoc: 'Assoc.',
+    finding_club: 'Looking up club "{name}"...', club_incomplete: 'Incomplete info for club "{name}".',
+    loading_ttr: 'Fetching live TTR...', player_info_title: '👤 Player: {nuid}', ttr_label: 'Live TTR',
+    loading_history: 'Fetching TTR history...',
+    unauthorized: 'Unauthorized: this endpoint requires login, please set a valid Cookie Token.', no_history: 'No history returned: {info}',
+    history_title: '📈 {name} · Current TTR {ttr} · Last {count} games', unknown: 'Unknown',
+    th_date: 'Date', th_delta: 'Change', th_after: 'After', th_score: 'Score', th_opponent: 'Opponent (TTR)',
+    loading_roster: 'Fetching roster...', no_roster: 'No roster returned, please check the team ID.',
+    roster_title: '📋 Roster (Team ID: {id})', th_rank: 'Rank', th_internal_id: 'Internal ID',
+    analyzing_team: 'Analysing team (live TTR per player, please wait)...', analysis_title: '🔍 Team Analysis (Team ID: {id})',
+    loading_schedule: 'Fetching schedule...', no_schedule: 'No schedule returned.',
+    schedule_title: '📅 Team Schedule (Team ID: {id}, {season})', th_opp_name: 'Opponent', th_opp_teamid: 'Opponent Team ID',
+    war_loading: '🏟️ Syncing schedule, scouting opponent roster and analysing each player (may take a minute)...',
+    war_locked: '🎯 Next opponent:', war_date: '📅 Match date:', war_report: '⚔️ Opponent Scouting Report',
+    th_rank_short: '#', th_player_name: 'Player Name', th_recent: 'Recent Form', th_trend: 'Trend (5)',
+    form_hot: '🔥 Hot', form_cold: '📉 Cold', form_flat: 'Steady', form_trend: '(W{wins}/5)',
+    loading_club_teams: 'Querying club teams...', no_club_teams: 'No club teams returned.',
+    club_teams_title: '🏢 Club Teams (Club: {club}, {org})',
+    th_team_name: 'Team Name', th_league_name: 'League',
+    loading_league: 'Fetching league table...', no_league: 'No table returned.',
+    league_title: '🏆 League Table (League: {id})',
+    th_team: 'Team', th_played: 'P', th_wdl: 'W-D-L', th_games: 'Games', th_points: 'Pts',
+    loading_live: 'Fetching live data...', no_live_detail: 'No match details available.',
+    th_match_no: 'No.', th_matchup: 'Matchup', th_state: 'State', vs: 'vs',
+  },
+};
+
+let LANG = localStorage.getItem('mytt_lang') || (navigator.language || '').slice(0, 2);
+if (!I18N[LANG]) LANG = 'zh';
+
+function t(key, params) {
+  let s = (I18N[LANG] && I18N[LANG][key]) ?? (I18N.zh[key] ?? key);
+  if (params) for (const [k, v] of Object.entries(params)) s = s.replaceAll('{' + k + '}', v);
+  return s;
+}
+
+function applyI18n() {
+  document.documentElement.lang = LANG;
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el => { el.placeholder = t(el.dataset.i18nPh); });
+  $('lang').value = LANG;
+  updateCacheBtn();
+  refreshToken();
+}
+
+function setLang(lang) {
+  if (!I18N[lang]) return;
+  LANG = lang;
+  localStorage.setItem('mytt_lang', lang);
+  applyI18n();
+}
 
 // ---------- 搜索历史（localStorage，每个输入框独立，最多 10 条）----------
 const HISTORY = {
@@ -275,7 +514,7 @@ function renderSuggest(input) {
   const items = HISTORY.get(id).filter(x => !q || x.toLowerCase().includes(q));
   if (!items.length) return hideSuggest();
   suggest.innerHTML =
-    `<div class="head"><span>🕘 历史搜索</span><span class="clear" data-clear="${id}">清空</span></div>` +
+    `<div class="head"><span>${t('hist_search')}</span><span class="clear" data-clear="${id}">${t('clear')}</span></div>` +
     items.map(x => `<div class="item" data-val="${esc(x)}"><span class="txt">${esc(x)}</span><span class="del" data-del="${esc(x)}">✕</span></div>`).join('');
   const r = input.getBoundingClientRect();
   suggest.style.left = (r.left + scrollX) + 'px';
@@ -367,17 +606,17 @@ function ttrHtml(v) {
   if (v == null || v === '' || String(v).toLowerCase() === 'n/a') return '<span class="red">N/A</span>';
   const s = String(v);
   if (/^-?\d+$/.test(s)) return `<span class="green">${s}</span>`;
-  if (/需登录|不可见|ERR|Not authorized/.test(s)) return `<span class="yellow">${esc(s)}</span>`;
+  if (/需登录|不可见|Anmeldung|login required|ERR|Not authorized/.test(s)) return `<span class="yellow">${esc(s)}</span>`;
   return esc(s);
 }
 function formHtml(form) {
-  if (!form) return ['<span class="badge flat">未知</span>', '<span class="dim">N/A</span>'];
+  if (!form) return [`<span class="badge flat">${t('unknown')}</span>`, '<span class="dim">N/A</span>'];
   const d = form.delta;
-  const badge = d > 15 ? '<span class="badge hot">🔥 极佳</span>'
-              : d < -10 ? '<span class="badge cold">📉 低迷</span>'
-              : '<span class="badge flat">平稳</span>';
+  const badge = d > 15 ? `<span class="badge hot">${t('form_hot')}</span>`
+              : d < -10 ? `<span class="badge cold">${t('form_cold')}</span>`
+              : `<span class="badge flat">${t('form_flat')}</span>`;
   const cls = d > 0 ? 'green' : d < 0 ? 'red' : 'dim';
-  return [badge, `<span class="${cls}">${d > 0 ? '+' : ''}${d}</span> <span class="dim">(胜${form.wins}/5)</span>`];
+  return [badge, `<span class="${cls}">${d > 0 ? '+' : ''}${d}</span> <span class="dim">${t('form_trend', {wins: form.wins})}</span>`];
 }
 // 有 nuid（NU 开头的 internal_id / person_id）时把人名渲染成可点击链接，跳到其 TTR 历史
 function nameLink(name, nuid) {
@@ -403,35 +642,33 @@ $('nav').addEventListener('click', e => {
 
 // ---------- Token ----------
 function tokenStatusText(c) {
-  if (!c.has_token) return '当前未设置 Token。';
-  if (!c.expires_at) return '已设置 Token（无法解析过期时间）。';
+  if (!c.has_token) return t('token_none');
+  if (!c.expires_at) return t('token_no_exp');
   const mins = Math.round((c.expires_at * 1000 - Date.now()) / 60000);
-  return mins > 0 ? `Token 有效，约 ${mins} 分钟后过期（到期会自动续期）。` : 'Token 已过期，点上方"自动获取"续期或重新导入。';
+  return mins > 0 ? t('token_valid', {n: mins}) : t('token_expired');
 }
 async function refreshToken() {
   try {
     const c = await api('/api/config');
     $('tokenBtn').classList.toggle('ok', c.has_token);
-    $('tokenBtn').textContent = c.has_token ? '🔑 Token ✓' : '🔑 Token';
+    $('tokenBtn').textContent = c.has_token ? t('token_btn_ok') : t('token_btn');
     $('tokenStatus').textContent = tokenStatusText(c);
   } catch {}
 }
 async function autoToken() {
-  $('tokenStatus').textContent = '⏳ 正在尝试续期 / 读取本机浏览器 Cookie（可能弹出钥匙串授权）...';
+  $('tokenStatus').textContent = t('auto_trying');
   try {
     const r = await fetch('/api/config/token/auto', {method: 'POST'});
     const d = await r.json();
     const msg = {
-      valid: '✅ 现有 Token 仍有效，无需更换。',
-      refreshed: '✅ 已自动续期，并写回 .env。',
-      browser: '✅ 已从本机浏览器导入登录状态。',
-      browser_refreshed: '✅ 已从本机浏览器导入并续期。',
-      manual_required: '❌ 自动获取失败：请先在本机浏览器登录 mytischtennis.de 再试，或手动粘贴 Cookie。',
+      valid: t('auto_valid'), refreshed: t('auto_refreshed'),
+      browser: t('auto_browser'), browser_refreshed: t('auto_browser_refreshed'),
+      manual_required: t('auto_manual'),
     }[d.status] || d.status;
     $('tokenStatus').textContent = msg;
     refreshToken();
     if (d.has_token && d.status !== 'manual_required') setTimeout(() => $('tokenStatus').textContent = tokenStatusText(d), 2500);
-  } catch (e) { $('tokenStatus').textContent = '❌ 请求失败: ' + e.message; }
+  } catch (e) { $('tokenStatus').textContent = t('req_failed') + e.message; }
 }
 // ---------- 缓存 ----------
 async function openCache() {
@@ -439,21 +676,19 @@ async function openCache() {
   try {
     const s = await api('/api/cache/stats');
     const kb = (s.size_bytes / 1024).toFixed(1);
-    $('cacheInfo').textContent = s.enabled
-      ? `已缓存 ${s.count} 条请求结果，占用 ${kb} KB（mytt_cache.db）`
-      : '缓存已通过 MYTT_NO_CACHE 环境变量停用';
-  } catch { $('cacheInfo').textContent = '无法读取缓存状态'; }
+    $('cacheInfo').textContent = s.enabled ? t('cache_stats', {count: s.count, kb}) : t('cache_disabled');
+  } catch { $('cacheInfo').textContent = t('cache_read_fail'); }
 }
 function closeCache() { $('cacheModal').classList.remove('show'); }
 async function clearCache() {
   const r = await fetch('/api/cache/clear', {method: 'POST'});
   const data = await r.json();
-  $('cacheInfo').textContent = `已清空 ${data.cleared} 条缓存。`;
+  $('cacheInfo').textContent = t('cache_cleared', {n: data.cleared});
 }
 function updateCacheBtn() {
   const live = $('forceLive').checked;
   $('cacheBtn').classList.toggle('live', live);
-  $('cacheBtn').textContent = live ? '⚡ 实时' : '💾 缓存';
+  $('cacheBtn').textContent = live ? t('btn_cache_live') : t('btn_cache');
 }
 
 function openToken() { $('modal').classList.add('show'); refreshToken(); $('tokenInput').focus(); }
@@ -473,11 +708,11 @@ function doSearch() {
   if (!q) return;
   HISTORY.add('search', q);
   if ($('searchType').value === 'clubs') return doSearchClubs(q);
-  run(`正在搜索球员 "${q}"...`, async () => {
+  run(t('searching_players', {q}), async () => {
     const data = await api('/api/search/players', {q});
     const items = (data.results || []).slice(0, 20);
     lastPlayers = items;
-    if (!items.length) return showError(`未能找到与 "${q}" 相关的球员。`);
+    if (!items.length) return showError(t('no_players', {q}));
     const rows = items.map((p, i) => {
       const pid = p.internal_id || p.person_id || '-';
       return `<tr class="click" onclick="playerActions(${i})">
@@ -486,14 +721,14 @@ function doSearch() {
         <td class="num" id="ttr-${i}"><span class="dim">…</span></td>
         <td class="dim">${esc(pid)}</td></tr>`;
     }).join('');
-    result.innerHTML = card(`🔍 球员搜索: ${esc(q)} (共 ${data.total_count ?? items.length} 条，点击行查看详情)`,
-      `<table><tr><th>姓名</th><th>俱乐部</th><th class="num">实时TTR</th><th>NUID/ID</th></tr>${rows}</table>`);
+    result.innerHTML = card(t('search_players_title', {q: esc(q), count: data.total_count ?? items.length}),
+      `<table><tr><th>${t('th_name')}</th><th>${t('th_club')}</th><th class="num">${t('th_live_ttr')}</th><th>${t('th_nuid')}</th></tr>${rows}</table>`);
     // 异步逐个补充 TTR
     for (let i = 0; i < items.length; i++) {
       const pid = items[i].internal_id || items[i].person_id;
       if (!pid) { $(`ttr-${i}`).innerHTML = ttrHtml(null); continue; }
       api(`/api/player/${encodeURIComponent(pid)}/ttr`)
-        .then(r => { const el = $(`ttr-${i}`); if (el) el.innerHTML = ttrHtml(r.ttr ?? '需登录可见'); })
+        .then(r => { const el = $(`ttr-${i}`); if (el) el.innerHTML = ttrHtml(r.ttr ?? t('login_required')); })
         .catch(() => {});
     }
   });
@@ -506,28 +741,28 @@ function playerActions(i) {
   const club = p.club_name || '';
   result.insertAdjacentHTML('afterbegin', card(`👤 ${esc(name)}`,
     `<div class="row">
-      ${nuid ? `<button class="btn" onclick="historyFor('${esc(nuid)}','${esc(p.person_id || '')}')">📈 TTR 历史</button>` : '<span class="dim">无 NUID，无法查历史</span>'}
-      ${club ? `<button class="btn alt" onclick="clubTeamsByName('${esc(club)}')">🏢 俱乐部球队</button>` : ''}
+      ${nuid ? `<button class="btn" onclick="historyFor('${esc(nuid)}','${esc(p.person_id || '')}')">${t('btn_hist_short')}</button>` : `<span class="dim">${t('no_nuid')}</span>`}
+      ${club ? `<button class="btn alt" onclick="clubTeamsByName('${esc(club)}')">${t('btn_club_teams')}</button>` : ''}
     </div>`));
 }
 
 function doSearchClubs(q) {
-  run(`正在搜索俱乐部 "${q}"...`, async () => {
+  run(t('searching_clubs', {q}), async () => {
     const data = await api('/api/search/clubs', {q});
     const items = data.results || [];
-    if (!items.length) return showError(`未找到俱乐部 "${q}"。`);
+    if (!items.length) return showError(t('no_club', {q}));
     const rows = items.map(c => `<tr class="click" onclick="doClubTeamsWith('${esc(c.clubnr)}','${esc(c.organization_short)}')">
       <td>${esc(c.clubname)}</td><td class="dim">${esc(c.clubnr)}</td><td>${esc(c.organization_short || '-')}</td></tr>`).join('');
-    result.innerHTML = card(`🔍 俱乐部搜索: ${esc(q)} (点击行查看球队)`,
-      `<table><tr><th>俱乐部名称</th><th>Club Nr</th><th>协会</th></tr>${rows}</table>`);
+    result.innerHTML = card(t('search_clubs_title', {q: esc(q)}),
+      `<table><tr><th>${t('th_club_name')}</th><th>${t('th_club_nr')}</th><th>${t('th_assoc')}</th></tr>${rows}</table>`);
   });
 }
 
 async function clubTeamsByName(name) {
-  run(`正在查找俱乐部 "${name}"...`, async () => {
+  run(t('finding_club', {name}), async () => {
     const data = await api('/api/search/clubs', {q: name});
     const c = (data.results || [])[0];
-    if (!c || !c.clubnr || !c.organization_short) return showError(`未找到俱乐部 "${name}" 的完整信息。`);
+    if (!c || !c.clubnr || !c.organization_short) return showError(t('club_incomplete', {name}));
     await renderClubTeams(c.clubnr, c.organization_short);
   });
 }
@@ -536,10 +771,10 @@ async function clubTeamsByName(name) {
 function doPlayerTtr() {
   const nuid = $('playerNuid').value.trim(); if (!nuid) return;
   HISTORY.add('player', nuid);
-  run('正在获取实时 TTR...', async () => {
+  run(t('loading_ttr'), async () => {
     const data = await api(`/api/player/${encodeURIComponent(nuid)}/ttr`);
-    result.innerHTML = card(`👤 球员信息: ${esc(nuid)}`,
-      `<table><tr><td class="dim">实时 TTR</td><td>${ttrHtml(data.ttr)}</td></tr>
+    result.innerHTML = card(t('player_info_title', {nuid: esc(nuid)}),
+      `<table><tr><td class="dim">${t('ttr_label')}</td><td>${ttrHtml(data.ttr)}</td></tr>
       ${data.error ? `<tr><td class="dim">Error</td><td class="red">${esc(JSON.stringify(data.error))}</td></tr>` : ''}</table>`);
   });
 }
@@ -550,12 +785,12 @@ function doPlayerHistory() {
 }
 function historyFor(nuid, clicktt_id) {
   result.scrollIntoView({behavior: 'smooth', block: 'start'});
-  run('正在获取 TTR 历史...', async () => {
+  run(t('loading_history'), async () => {
     const data = await api(`/api/player/${encodeURIComponent(nuid)}/history`, {clicktt_id});
     if (!data.event) {
       const err = data.error;
-      if (err && err.code === 'PT403') return showError('未授权：该接口需要登录，请设置有效的 Cookie Token。');
-      return showError('未获取到历史数据: ' + JSON.stringify(data).slice(0, 200));
+      if (err && err.code === 'PT403') return showError(t('unauthorized'));
+      return showError(t('no_history', {info: JSON.stringify(data).slice(0, 200)}));
     }
     const events = [...data.event].reverse().slice(0, 15);
     const rows = events.flatMap(ev => {
@@ -576,11 +811,11 @@ function historyFor(nuid, clicktt_id) {
           ? `<span class="score" data-games="${games.join(',')}">${score}</span>` : score;
         return `<tr><td>${date}</td><td class="num">${dHtml}</td><td class="num">${esc(ev.ttr_after ?? '')}</td>
           <td class="ctr ${win ? 'green' : 'red'}">${scoreCell}</td>
-          <td>${nameLink(m.other_person_name || '未知', m.other_person_id)} <span class="dim">(${esc(m.other_ttr ?? '?')})</span></td></tr>`;
+          <td>${nameLink(m.other_person_name || t('unknown'), m.other_person_id)} <span class="dim">(${esc(m.other_ttr ?? '?')})</span></td></tr>`;
       });
     }).join('');
-    result.innerHTML = card(`📈 ${esc(data.person_name || nuid)} · 当前 TTR ${esc(data.ttr ?? 'N/A')} · 最近 ${events.length} 场`,
-      `<table><tr><th>日期</th><th class="num">变动</th><th class="num">赛后</th><th class="ctr">比分</th><th>对手 (TTR)</th></tr>${rows}</table>`);
+    result.innerHTML = card(t('history_title', {name: esc(data.person_name || nuid), ttr: esc(data.ttr ?? 'N/A'), count: events.length}),
+      `<table><tr><th>${t('th_date')}</th><th class="num">${t('th_delta')}</th><th class="num">${t('th_after')}</th><th class="ctr">${t('th_score')}</th><th>${t('th_opponent')}</th></tr>${rows}</table>`);
   });
 }
 
@@ -595,37 +830,37 @@ const teamRosterRows = players => players.map(p => {
 function doTeamPlayers() {
   const id = $('teamId').value.trim(); if (!id) return;
   localStorage.setItem('mytt_team', id); HISTORY.add('team', id);
-  run('正在获取阵容...', async () => {
+  run(t('loading_roster'), async () => {
     const data = await api(`/api/team/${encodeURIComponent(id)}/players`);
-    if (!data.players.length) return showError('未获取到球队阵容，请检查 teamId。');
-    result.innerHTML = card(`📋 球队阵容 (TeamID: ${esc(id)})`,
-      `<table><tr><th class="num">排名</th><th>姓名</th><th>Internal ID</th></tr>${teamRosterRows(data.players)}</table>`);
+    if (!data.players.length) return showError(t('no_roster'));
+    result.innerHTML = card(t('roster_title', {id: esc(id)}),
+      `<table><tr><th class="num">${t('th_rank')}</th><th>${t('th_name')}</th><th>${t('th_internal_id')}</th></tr>${teamRosterRows(data.players)}</table>`);
   });
 }
 function doTeamAnalysis() {
   const id = $('teamId').value.trim(); if (!id) return;
   localStorage.setItem('mytt_team', id); HISTORY.add('team', id);
-  run('正在分析球队（逐人获取实时 TTR，稍等）...', async () => {
+  run(t('analyzing_team'), async () => {
     const data = await api(`/api/team/${encodeURIComponent(id)}/analysis`);
-    if (!data.players.length) return showError('未获取到球队阵容，请检查 teamId。');
+    if (!data.players.length) return showError(t('no_roster'));
     const rows = data.players.map(p =>
       `<tr><td class="num">${esc(p.rank)}</td><td>${nameLink(p.name, p.nuid)}</td><td class="dim">${esc(p.nuid)}</td><td class="num">${ttrHtml(p.ttr)}</td></tr>`).join('');
-    result.innerHTML = card(`🔍 球队分析 (TeamID: ${esc(id)})`,
-      `<table><tr><th class="num">排名</th><th>姓名</th><th>NUID</th><th class="num">实时TTR</th></tr>${rows}</table>`);
+    result.innerHTML = card(t('analysis_title', {id: esc(id)}),
+      `<table><tr><th class="num">${t('th_rank')}</th><th>${t('th_name')}</th><th>NUID</th><th class="num">${t('th_live_ttr')}</th></tr>${rows}</table>`);
   });
 }
 function doTeamSchedule() {
   const id = $('teamId').value.trim(); if (!id) return;
   HISTORY.add('team', id);
   const season = $('teamSeason').value.trim() || '25--26';
-  run('正在获取赛程...', async () => {
+  run(t('loading_schedule'), async () => {
     const data = await api(`/api/team/${encodeURIComponent(id)}/schedule`, {season});
     const matches = data.data || [];
-    if (!matches.length) return showError('未获取到赛程。');
+    if (!matches.length) return showError(t('no_schedule'));
     const rows = matches.map(m => `<tr><td>${esc((m.date || '-').slice(0, 10))}</td>
       <td>${esc(m.opponent_team_name || '-')}</td><td class="dim">${esc(m.opponent_team_id ?? '-')}</td></tr>`).join('');
-    result.innerHTML = card(`📅 球队赛程 (TeamID: ${esc(id)}, ${esc(season)})`,
-      `<table><tr><th>日期</th><th>对手名称</th><th>对手 TeamID</th></tr>${rows}</table>`);
+    result.innerHTML = card(t('schedule_title', {id: esc(id), season: esc(season)}),
+      `<table><tr><th>${t('th_date')}</th><th>${t('th_opp_name')}</th><th>${t('th_opp_teamid')}</th></tr>${rows}</table>`);
   });
 }
 
@@ -633,7 +868,7 @@ function doTeamSchedule() {
 function doWarRoom() {
   const id = $('warTeamId').value.trim(); if (!id) return;
   localStorage.setItem('mytt_war', id); HISTORY.add('war', id);
-  run('🏟️ 正在同步赛程、侦察对手阵容并逐人分析（可能需要一分钟）...', async () => {
+  run(t('war_loading'), async () => {
     const r = await api(`/api/team/${encodeURIComponent(id)}/warroom`);
     if (r.error) return showError(r.error);
     const rows = r.players.map(p => {
@@ -643,10 +878,10 @@ function doWarRoom() {
     }).join('');
     result.innerHTML = `
       <div class="card">
-        <div class="opp-banner">🎯 下场对手锁定: <b>${esc(r.opponent_name)}</b> <span class="dim">(ID: ${esc(r.opponent_id)})</span><br>📅 比赛日期: ${esc(r.date)}</div>
-        <div class="panel-title">⚔️ 对手战力侦察报告</div>
+        <div class="opp-banner">${t('war_locked')} <b>${esc(r.opponent_name)}</b> <span class="dim">(ID: ${esc(r.opponent_id)})</span><br>${t('war_date')} ${esc(r.date)}</div>
+        <div class="panel-title">${t('war_report')}</div>
         <div class="scroll"><table>
-          <tr><th class="num">排</th><th>选手姓名</th><th class="num">实时 TTR</th><th class="ctr">近期状态</th><th>5场趋势</th></tr>${rows}
+          <tr><th class="num">${t('th_rank_short')}</th><th>${t('th_player_name')}</th><th class="num">${t('th_live_ttr')}</th><th class="ctr">${t('th_recent')}</th><th>${t('th_trend')}</th></tr>${rows}
         </table></div>
       </div>`;
   });
@@ -656,43 +891,43 @@ function doWarRoom() {
 async function renderClubTeams(clubNumber, organization) {
   const data = await api('/api/club/teams', {club_number: clubNumber, organization});
   const teams = data.data || [];
-  if (!teams.length) return showError('未获取到俱乐部球队。');
-  const rows = teams.map(t => `<tr><td>${esc(t.team_name || '-')}</td><td class="dim">${esc(t.league_name || '-')}</td>
-    <td class="num">${esc(t.team_id ?? '-')}</td><td class="num dim">${esc(t.group_id ?? '-')}</td></tr>`).join('');
-  result.innerHTML = card(`🏢 俱乐部球队 (Club: ${esc(clubNumber)}, ${esc(organization)})`,
-    `<table><tr><th>球队名称</th><th>联赛名称</th><th class="num">Team ID</th><th class="num">Group ID</th></tr>${rows}</table>`);
+  if (!teams.length) return showError(t('no_club_teams'));
+  const rows = teams.map(x => `<tr><td>${esc(x.team_name || '-')}</td><td class="dim">${esc(x.league_name || '-')}</td>
+    <td class="num">${esc(x.team_id ?? '-')}</td><td class="num dim">${esc(x.group_id ?? '-')}</td></tr>`).join('');
+  result.innerHTML = card(t('club_teams_title', {club: esc(clubNumber), org: esc(organization)}),
+    `<table><tr><th>${t('th_team_name')}</th><th>${t('th_league_name')}</th><th class="num">Team ID</th><th class="num">Group ID</th></tr>${rows}</table>`);
 }
 function doClubTeams() {
   const n = $('clubNumber').value.trim(), o = $('clubOrg').value.trim();
   if (!n || !o) return;
   HISTORY.add('clubNumber', n);
-  run('正在查询俱乐部球队...', () => renderClubTeams(n, o));
+  run(t('loading_club_teams'), () => renderClubTeams(n, o));
 }
-function doClubTeamsWith(n, o) { run('正在查询俱乐部球队...', () => renderClubTeams(n, o)); }
+function doClubTeamsWith(n, o) { run(t('loading_club_teams'), () => renderClubTeams(n, o)); }
 
 function doLeagueTable() {
   const assoc = $('leagueAssoc').value.trim(), id = $('leagueId').value.trim();
   if (!assoc || !id) return;
   HISTORY.add('leagueId', id);
-  run('正在获取联赛排名...', async () => {
+  run(t('loading_league'), async () => {
     const data = await api(`/api/league/${encodeURIComponent(assoc)}/${encodeURIComponent(id)}/table`);
-    let t = data.data || [];
-    if (!Array.isArray(t)) t = t.table || [];
-    if (!t.length) return showError('未获取到排名表。');
-    const rows = t.map(e => `<tr><td class="num">${esc(e.rank ?? '-')}</td><td>${esc(e.team_name || '-')}</td>
+    let rows_ = data.data || [];
+    if (!Array.isArray(rows_)) rows_ = rows_.table || [];
+    if (!rows_.length) return showError(t('no_league'));
+    const rows = rows_.map(e => `<tr><td class="num">${esc(e.rank ?? '-')}</td><td>${esc(e.team_name || '-')}</td>
       <td class="num">${esc(e.matches_played ?? '-')}</td>
       <td class="ctr">${esc(e.matches_won ?? 0)}-${esc(e.matches_draw ?? 0)}-${esc(e.matches_lost ?? 0)}</td>
       <td class="ctr dim">${esc(e.games_won ?? 0)}:${esc(e.games_lost ?? 0)}</td>
       <td class="num green"><b>${esc(e.points ?? '-')}</b></td></tr>`).join('');
-    result.innerHTML = card(`🏆 联赛排名表 (League: ${esc(id)})`,
-      `<table><tr><th class="num">排</th><th>球队</th><th class="num">场</th><th class="ctr">胜-平-负</th><th class="ctr">球数</th><th class="num">积分</th></tr>${rows}</table>`);
+    result.innerHTML = card(t('league_title', {id: esc(id)}),
+      `<table><tr><th class="num">${t('th_rank_short')}</th><th>${t('th_team')}</th><th class="num">${t('th_played')}</th><th class="ctr">${t('th_wdl')}</th><th class="ctr">${t('th_games')}</th><th class="num">${t('th_points')}</th></tr>${rows}</table>`);
   });
 }
 
 function doMeetingLive() {
   const id = $('meetingId').value.trim(); if (!id) return;
   HISTORY.add('meeting', id);
-  run('正在获取 Live 数据...', async () => {
+  run(t('loading_live'), async () => {
     const data = await api(`/api/meeting/${encodeURIComponent(id)}/live`);
     const live = data.data || {};
     const score = `${live.matches_won_home ?? 0} : ${live.matches_won_away ?? 0}`;
@@ -700,20 +935,20 @@ function doMeetingLive() {
     const rows = matches.map(m => {
       const p1 = `${m.player_home_name_1 || ''} ${m.player_home_name_2 || ''}`.trim();
       const p2 = `${m.player_away_name_1 || ''} ${m.player_away_name_2 || ''}`.trim();
-      return `<tr><td class="num">${esc(m.match_order ?? '-')}</td><td>${esc(p1)} <span class="dim">vs</span> ${esc(p2)}</td>
+      return `<tr><td class="num">${esc(m.match_order ?? '-')}</td><td>${esc(p1)} <span class="dim">${t('vs')}</span> ${esc(p2)}</td>
         <td class="dim">${esc(m.state || '-')}</td><td class="ctr">${esc(m.sets_won_home ?? 0)}:${esc(m.sets_won_away ?? 0)}</td></tr>`;
     }).join('');
     result.innerHTML = card(`🔴 ${esc(live.team_home || 'Home')} <span class="yellow">${score}</span> ${esc(live.team_away || 'Away')}`,
       matches.length
-        ? `<table><tr><th class="num">场次</th><th>对阵</th><th>状态</th><th class="ctr">比分</th></tr>${rows}</table>`
-        : '<span class="dim">暂无详细场次数据。</span>');
+        ? `<table><tr><th class="num">${t('th_match_no')}</th><th>${t('th_matchup')}</th><th>${t('th_state')}</th><th class="ctr">${t('th_score')}</th></tr>${rows}</table>`
+        : `<span class="dim">${t('no_live_detail')}</span>`);
   });
 }
 
 // ---------- 初始化 ----------
 $('teamId').value = localStorage.getItem('mytt_team') || '';
 $('warTeamId').value = localStorage.getItem('mytt_war') || '';
-refreshToken();
+applyI18n();  // 应用语言（内部会调用 updateCacheBtn + refreshToken）
 </script>
 </body>
 </html>
