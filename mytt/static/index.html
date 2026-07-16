@@ -62,6 +62,14 @@
   .ctr { text-align: center; }
   .pname { color: var(--accent); cursor: pointer; border-bottom: 1px dotted transparent; }
   .pname:hover { border-bottom-color: var(--accent); }
+  .score { cursor: help; border-bottom: 1px dotted currentColor; }
+  #tooltip {
+    position: absolute; z-index: 60; display: none; pointer-events: none; white-space: nowrap;
+    background: var(--panel2); border: 1px solid var(--line); border-radius: 8px;
+    padding: 6px 10px; font-size: 13px; box-shadow: 0 6px 20px rgba(0,0,0,.5);
+  }
+  #tooltip.show { display: block; }
+  #tooltip .g { margin: 0 4px; }
 
   .green { color: var(--green); } .red { color: var(--red); } .yellow { color: var(--yellow); } .dim { color: var(--dim); }
   .badge { display: inline-block; padding: 3px 10px; border-radius: 99px; font-size: 12px; }
@@ -204,6 +212,7 @@
 </div>
 
 <div id="suggest"></div>
+<div id="tooltip"></div>
 
 <div id="cacheModal" class="overlay">
   <div class="box">
@@ -300,6 +309,34 @@ suggest.addEventListener('mousedown', e => {
 });
 addEventListener('scroll', () => suggestInput && renderSuggest(suggestInput), true);
 
+// ---------- 比分悬停：显示各局局分 ----------
+const tooltip = $('tooltip');
+function showTip(el) {
+  const games = (el.dataset.games || '').split(',').filter(Boolean);
+  if (!games.length) return;
+  tooltip.innerHTML = games.map(g => {
+    const [a, b] = g.split(':').map(Number);
+    return `<span class="g ${a > b ? 'green' : 'red'}">${esc(g)}</span>`;
+  }).join('');
+  tooltip.classList.add('show');
+  const r = el.getBoundingClientRect();
+  let left = r.left + scrollX + r.width / 2 - tooltip.offsetWidth / 2;
+  left = Math.max(scrollX + 8, Math.min(left, scrollX + innerWidth - tooltip.offsetWidth - 8));
+  let top = r.top + scrollY - tooltip.offsetHeight - 6;
+  if (top < scrollY + 4) top = r.bottom + scrollY + 6;  // 顶部空间不够则翻到下方
+  tooltip.style.left = left + 'px';
+  tooltip.style.top = top + 'px';
+}
+function hideTip() { tooltip.classList.remove('show'); }
+document.addEventListener('mouseover', e => {
+  const el = e.target.closest('.score[data-games]');
+  if (el) showTip(el);
+});
+document.addEventListener('mouseout', e => {
+  if (e.target.closest('.score[data-games]')) hideTip();
+});
+addEventListener('scroll', hideTip, true);
+
 // ---------- 基础 ----------
 async function api(path, params) {
   const url = new URL(path, location.origin);
@@ -346,6 +383,15 @@ function formHtml(form) {
 function nameLink(name, nuid) {
   name = String(name ?? '').trim() || '-';
   return nuid ? `<span class="pname" onclick="historyFor('${esc(String(nuid))}')">${esc(name)}</span>` : esc(name);
+}
+// 从一场比赛提取各局比分（跳过未打的 0:0 局），如 ['6:11','11:8',...]
+function gameScores(m) {
+  const games = [];
+  for (let i = 1; i <= 7; i++) {
+    const a = m['own_set' + i] || 0, b = m['other_set' + i] || 0;
+    if (a || b) games.push(a + ':' + b);
+  }
+  return games;
 }
 
 // ---------- Tab 切换 ----------
@@ -524,8 +570,12 @@ function historyFor(nuid, clicktt_id) {
       }
       return matches.map(m => {
         const win = (m.own_sets || 0) > (m.other_sets || 0);
+        const games = gameScores(m);
+        const score = `${m.own_sets || 0}:${m.other_sets || 0}`;
+        const scoreCell = games.length
+          ? `<span class="score" data-games="${games.join(',')}">${score}</span>` : score;
         return `<tr><td>${date}</td><td class="num">${dHtml}</td><td class="num">${esc(ev.ttr_after ?? '')}</td>
-          <td class="ctr ${win ? 'green' : 'red'}">${m.own_sets || 0}:${m.other_sets || 0}</td>
+          <td class="ctr ${win ? 'green' : 'red'}">${scoreCell}</td>
           <td>${nameLink(m.other_person_name || '未知', m.other_person_id)} <span class="dim">(${esc(m.other_ttr ?? '?')})</span></td></tr>`;
       });
     }).join('');
