@@ -295,6 +295,9 @@ const I18N = {
     auto_browser: '✅ 已从本机浏览器导入登录状态。', auto_browser_refreshed: '✅ 已从本机浏览器导入并续期。',
     auto_manual: '❌ 自动获取失败：请先在本机浏览器登录 mytischtennis.de 再试，或手动粘贴 Cookie。',
     req_failed: '❌ 请求失败: ',
+    err_network: '无法连接到服务器，请确认后端服务正在运行（python web.py）。',
+    err_http: '请求失败（HTTP {status}）',
+    err_parse: '服务器返回的内容无法解析（非 JSON）。',
     hist_search: '🕘 历史搜索', clear: '清空',
     searching_players: '正在搜索球员 "{q}"...', no_players: '未能找到与 "{q}" 相关的球员。',
     search_players_title: '🔍 球员搜索: {q} (共 {count} 条，点击行查看详情)',
@@ -362,6 +365,9 @@ const I18N = {
     auto_browser: '✅ Anmeldung aus dem Browser importiert.', auto_browser_refreshed: '✅ Aus Browser importiert und erneuert.',
     auto_manual: '❌ Fehlgeschlagen: bitte zuerst im Browser bei mytischtennis.de anmelden oder Cookie manuell einfügen.',
     req_failed: '❌ Anfrage fehlgeschlagen: ',
+    err_network: 'Server nicht erreichbar. Bitte prüfen, ob der Backend-Dienst läuft (python web.py).',
+    err_http: 'Anfrage fehlgeschlagen (HTTP {status})',
+    err_parse: 'Serverantwort konnte nicht verarbeitet werden (kein JSON).',
     hist_search: '🕘 Suchverlauf', clear: 'Leeren',
     searching_players: 'Suche Spieler "{q}"...', no_players: 'Keine Spieler zu "{q}" gefunden.',
     search_players_title: '🔍 Spielersuche: {q} ({count} Treffer, Zeile anklicken für Details)',
@@ -429,6 +435,9 @@ const I18N = {
     auto_browser: '✅ Imported login from local browser.', auto_browser_refreshed: '✅ Imported from browser and refreshed.',
     auto_manual: '❌ Auto-fetch failed: log in to mytischtennis.de in your browser first, or paste a cookie manually.',
     req_failed: '❌ Request failed: ',
+    err_network: 'Cannot reach the server. Please make sure the backend is running (python web.py).',
+    err_http: 'Request failed (HTTP {status})',
+    err_parse: 'Server response could not be parsed (not JSON).',
     hist_search: '🕘 Search History', clear: 'Clear',
     searching_players: 'Searching players "{q}"...', no_players: 'No players found for "{q}".',
     search_players_title: '🔍 Player search: {q} ({count} results, click a row for details)',
@@ -583,9 +592,26 @@ async function api(path, params) {
   if ($('forceLive').checked && path.startsWith('/api/') && !path.startsWith('/api/config') && !path.startsWith('/api/cache')) {
     url.searchParams.set('refresh', 'true');
   }
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
+  let res;
+  try {
+    res = await fetch(url);
+  } catch {
+    throw new Error(t('err_network'));  // 服务未运行 / 断网 / 连接被拒
+  }
+  if (!res.ok) {
+    let detail = '';
+    try {
+      const b = await res.clone().json();
+      detail = b.detail || b.error || b.msg || '';
+      if (detail && typeof detail !== 'string') detail = JSON.stringify(detail);
+    } catch { try { detail = (await res.text()).slice(0, 160); } catch {} }
+    throw new Error(t('err_http', {status: res.status}) + (detail ? ': ' + detail : ''));
+  }
+  try {
+    return await res.json();
+  } catch {
+    throw new Error(t('err_parse'));  // 返回内容不是有效 JSON
+  }
 }
 
 function loading(text) {
