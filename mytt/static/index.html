@@ -623,7 +623,9 @@ function showError(msg) {
 function card(title, inner) {
   return `<div class="card">${title ? `<div class="panel-title">${title}</div>` : ''}<div class="scroll">${inner}</div></div>`;
 }
+let lastRun = null;  // 记录上一次数据加载动作，Token 变化后可自动重跑
 async function run(text, fn) {
+  lastRun = () => run(text, fn);
   loading(text);
   try { await fn(); } catch (e) { showError(e.message); }
 }
@@ -693,7 +695,10 @@ async function autoToken() {
     }[d.status] || d.status;
     $('tokenStatus').textContent = msg;
     refreshToken();
-    if (d.has_token && d.status !== 'manual_required') setTimeout(() => $('tokenStatus').textContent = tokenStatusText(d), 2500);
+    if (d.has_token && d.status !== 'manual_required') {
+      setTimeout(() => $('tokenStatus').textContent = tokenStatusText(d), 2500);
+      if (lastRun) { closeToken(); lastRun(); }  // 登录成功后自动重跑上一次查询，刷新结果
+    }
   } catch (e) { $('tokenStatus').textContent = t('req_failed') + e.message; }
 }
 // ---------- 缓存 ----------
@@ -720,11 +725,13 @@ function updateCacheBtn() {
 function openToken() { $('modal').classList.add('show'); refreshToken(); $('tokenInput').focus(); }
 function closeToken() { $('modal').classList.remove('show'); }
 async function saveToken() {
-  await fetch('/api/config/token', {
+  const r = await fetch('/api/config/token', {
     method: 'POST', headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({token: $('tokenInput').value.trim()}),
   });
+  const d = await r.json().catch(() => ({}));
   closeToken(); refreshToken();
+  if (d.has_token && lastRun) lastRun();  // 保存 Token 后自动重跑上一次查询
 }
 
 // ---------- 搜索 ----------

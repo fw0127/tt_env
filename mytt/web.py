@@ -7,7 +7,7 @@ import time
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from dotenv import load_dotenv
+from dotenv import dotenv_values, load_dotenv
 from fastapi import Depends, FastAPI
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -50,10 +50,27 @@ async def _cache_control(refresh: bool = False):
 
 
 def _token_keeper():
-    """请求前检查：Token 快过期就自动续期并写回 .env（60 秒冷却防止反复尝试）。"""
+    """请求前维护 Token：
+    1) 自愈：内存中无 Token 或即将过期时，从 .env 重新读取更新的 Token
+       （CLI 或上次浏览器导入可能已写入更 fresh 的 Token，无需重启服务）。
+    2) 快过期时尝试站点自动续期并写回 .env（60 秒冷却防止反复尝试）。"""
     global _last_refresh_try
-    if _token and _token_exp and _token_exp - time.time() < 120 and time.time() - _last_refresh_try > 60:
-        _last_refresh_try = time.time()
+    now = time.time()
+
+    # 1) 从 .env 自愈（读文件而非 os.getenv，后者是启动时的旧值）
+    if not _token or (_token_exp and _token_exp - now < 60):
+        try:
+            env_cookie = dotenv_values(ROOT / ".env").get("MYTT_COOKIE", "") or ""
+        except Exception:
+            env_cookie = ""
+        env_exp = auth.session_expires_at(env_cookie) if env_cookie else None
+        if env_exp and env_exp - now > 60 and env_cookie != _token:
+            _set_current(env_cookie)
+            return
+
+    # 2) 快过期时站点续期
+    if _token and _token_exp and _token_exp - now < 120 and now - _last_refresh_try > 60:
+        _last_refresh_try = now
         new, status = auth.ensure_fresh(_token, allow_browser=False)
         if status == "refreshed" and new:
             _set_current(new)
