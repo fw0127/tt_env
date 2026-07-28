@@ -4,6 +4,7 @@ env
 config.yaml
 a
 mytt_cache.db
+mytt_notes.db
 
 # Python
 __pycache__/

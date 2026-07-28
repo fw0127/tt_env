@@ -30,6 +30,13 @@
     background: var(--panel2); color: var(--text); border: 1px solid var(--line);
     border-radius: 10px; padding: 7px 10px; cursor: pointer; font-size: 13px;
   }
+  #backBtn, #fwdBtn {
+    display: none; margin: 0 6px 10px 0; background: var(--panel2); color: var(--accent);
+    border: 1px solid var(--line); border-radius: 10px; padding: 7px 14px;
+    cursor: pointer; font-size: 13px;
+  }
+  #backBtn.show, #fwdBtn.show { display: inline-block; }
+  #backBtn:hover, #fwdBtn:hover { border-color: var(--accent); }
 
   nav { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
   nav button {
@@ -67,6 +74,22 @@
   .pname { color: var(--accent); cursor: pointer; border-bottom: 1px dotted transparent; }
   .pname:hover { border-bottom-color: var(--accent); }
   .score { cursor: help; border-bottom: 1px dotted currentColor; }
+  .h2h { cursor: pointer; color: var(--accent2); margin-left: 6px; font-size: 12px; }
+  .h2h:hover { filter: brightness(1.3); }
+  .sumbar {
+    display: flex; flex-wrap: wrap; gap: 18px; padding: 12px 16px; margin-bottom: 14px;
+    background: linear-gradient(135deg, rgba(56,189,248,.10), rgba(245,158,11,.08));
+    border: 1px solid var(--line); border-radius: 12px;
+  }
+  .sumbar .k { color: var(--dim); font-size: 12px; display: block; }
+  .sumbar .v { font-size: 17px; font-weight: 600; }
+  #noteBox {
+    width: 100%; min-height: 110px; resize: vertical; font: inherit; font-size: 14px;
+    background: var(--panel2); border: 1px solid var(--line); border-radius: 10px;
+    color: var(--text); padding: 10px 12px; outline: none;
+  }
+  #noteBox:focus { border-color: var(--accent); }
+  .note-saved { color: var(--green); font-size: 12px; }
   #tooltip {
     position: absolute; z-index: 60; display: none; pointer-events: none; white-space: nowrap;
     background: var(--panel2); border: 1px solid var(--line); border-radius: 8px;
@@ -140,6 +163,7 @@
     <button data-tab="player" data-i18n="nav_player">👤 球员</button>
     <button data-tab="team" data-i18n="nav_team">📋 球队</button>
     <button data-tab="war" data-i18n="nav_war">⚔️ 作战室</button>
+    <button data-tab="review" data-i18n="nav_review">📝 复盘</button>
     <button data-tab="more" data-i18n="nav_more">🏆 更多</button>
   </nav>
 
@@ -191,6 +215,17 @@
     </div>
   </section>
 
+  <section id="tab-review">
+    <div class="card">
+      <div class="row">
+        <input id="reviewMe" data-history="reviewMe" autocomplete="off" data-i18n-ph="ph_review_me" placeholder="我方球员 NUID，例如 NU7535" onkeydown="if(event.key==='Enter')doReview()">
+        <input id="reviewOpp" data-history="reviewOpp" autocomplete="off" data-i18n-ph="ph_review_opp" placeholder="对手 NUID，例如 NU59787" onkeydown="if(event.key==='Enter')doReview()">
+        <button class="btn" onclick="doReview()" data-i18n="btn_review">📝 复盘</button>
+      </div>
+      <p class="hint" data-i18n="hint_review">列出两人的全部交手记录（比分、各局局分、赛前胜率预期），并可写下你自己的复盘笔记，按对手归档。TTR 历史表中对手名旁的 ⚔ 可直接进入复盘。</p>
+    </div>
+  </section>
+
   <section id="tab-more">
     <div class="card">
       <div class="panel-title" data-i18n="more_club">🏢 俱乐部所有球队</div>
@@ -217,6 +252,8 @@
     </div>
   </section>
 
+  <button id="backBtn" onclick="goBack()" title="Alt + ←">← 返回</button>
+  <button id="fwdBtn" onclick="goForward()" title="Alt + →">前进 →</button>
   <div id="result"></div>
 </div>
 
@@ -263,7 +300,15 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 const I18N = {
   zh: {
     app_title: 'MyTT 助手', app_sub: 'Web 版',
-    nav_search: '🔍 搜索', nav_player: '👤 球员', nav_team: '📋 球队', nav_war: '⚔️ 作战室', nav_more: '🏆 更多',
+    nav_search: '🔍 搜索', nav_player: '👤 球员', nav_team: '📋 球队', nav_war: '⚔️ 作战室', nav_review: '📝 复盘', nav_more: '🏆 更多',
+    ph_review_me: '我方球员 NUID，例如 NU7535', ph_review_opp: '对手 NUID，例如 NU59787', btn_review: '📝 复盘',
+    hint_review: '列出两人的全部交手记录（比分、各局局分、赛前胜率预期），并可写下你自己的复盘笔记，按对手归档。TTR 历史表中对手名旁的 ⚔ 可直接进入复盘。',
+    loading_review: '正在聚合交手记录...', no_encounters: '{a} 与 {b} 之间没有交手记录。',
+    review_title: '📝 交手复盘：{a} vs {b}',
+    sum_played: '交手场次', sum_record: '胜-负', sum_winrate: '胜率', sum_sets: '局分', sum_points: '小分',
+    th_game_scores: '各局局分', th_opp_ttr: '对手 TTR', th_expected: '赛前预期', th_event: '赛事',
+    note_title: '✍️ 我的复盘笔记', note_ph: '对手打法特点、战术得失、下次注意事项……（自动按对手归档，保存在本机）',
+    btn_save_note: '保存笔记', note_saved: '✓ 已保存', note_updated: '上次更新：{time}',
     opt_players: '球员', opt_clubs: '俱乐部',
     ph_search: '例如 Dang Qiu / Borussia', btn_search: '搜索',
     hint_search: '搜索球员后点击结果行可查看 TTR 历史或所属俱乐部球队。',
@@ -298,7 +343,7 @@ const I18N = {
     err_network: '无法连接到服务器，请确认后端服务正在运行（python web.py）。',
     err_http: '请求失败（HTTP {status}）',
     err_parse: '服务器返回的内容无法解析（非 JSON）。',
-    hist_search: '🕘 历史搜索', clear: '清空',
+    hist_search: '🕘 历史搜索', clear: '清空', btn_back: '← 返回', btn_forward: '前进 →',
     searching_players: '正在搜索球员 "{q}"...', no_players: '未能找到与 "{q}" 相关的球员。',
     search_players_title: '🔍 球员搜索: {q} (共 {count} 条，点击行查看详情)',
     th_name: '姓名', th_club: '俱乐部', th_live_ttr: '实时TTR', th_nuid: 'NUID/ID',
@@ -333,7 +378,15 @@ const I18N = {
   },
   de: {
     app_title: 'MyTT Assistent', app_sub: 'Web',
-    nav_search: '🔍 Suche', nav_player: '👤 Spieler', nav_team: '📋 Team', nav_war: '⚔️ Gegneranalyse', nav_more: '🏆 Mehr',
+    nav_search: '🔍 Suche', nav_player: '👤 Spieler', nav_team: '📋 Team', nav_war: '⚔️ Gegneranalyse', nav_review: '📝 Nachbereitung', nav_more: '🏆 Mehr',
+    ph_review_me: 'Eigene NUID, z.B. NU7535', ph_review_opp: 'Gegner-NUID, z.B. NU59787', btn_review: '📝 Nachbereitung',
+    hint_review: 'Zeigt alle bisherigen Duelle (Satzergebnis, Satzverläufe, erwartete Siegchance) und bietet Platz für eigene Notizen, nach Gegner archiviert. Das ⚔ neben dem Gegnernamen im TTR-Verlauf führt direkt hierher.',
+    loading_review: 'Duelle werden zusammengetragen...', no_encounters: 'Keine Duelle zwischen {a} und {b}.',
+    review_title: '📝 Duellbilanz: {a} vs {b}',
+    sum_played: 'Duelle', sum_record: 'S-N', sum_winrate: 'Siegquote', sum_sets: 'Sätze', sum_points: 'Punkte',
+    th_game_scores: 'Satzverlauf', th_opp_ttr: 'Gegner-TTR', th_expected: 'Erwartung', th_event: 'Wettbewerb',
+    note_title: '✍️ Meine Notizen', note_ph: 'Spielweise des Gegners, Taktik, worauf nächstes Mal achten … (nach Gegner archiviert, lokal gespeichert)',
+    btn_save_note: 'Notiz speichern', note_saved: '✓ Gespeichert', note_updated: 'Zuletzt aktualisiert: {time}',
     opt_players: 'Spieler', opt_clubs: 'Vereine',
     ph_search: 'z.B. Dang Qiu / Borussia', btn_search: 'Suchen',
     hint_search: 'Nach der Spielersuche auf eine Zeile klicken für TTR-Verlauf oder Vereinsteams.',
@@ -368,7 +421,7 @@ const I18N = {
     err_network: 'Server nicht erreichbar. Bitte prüfen, ob der Backend-Dienst läuft (python web.py).',
     err_http: 'Anfrage fehlgeschlagen (HTTP {status})',
     err_parse: 'Serverantwort konnte nicht verarbeitet werden (kein JSON).',
-    hist_search: '🕘 Suchverlauf', clear: 'Leeren',
+    hist_search: '🕘 Suchverlauf', clear: 'Leeren', btn_back: '← Zurück', btn_forward: 'Vorwärts →',
     searching_players: 'Suche Spieler "{q}"...', no_players: 'Keine Spieler zu "{q}" gefunden.',
     search_players_title: '🔍 Spielersuche: {q} ({count} Treffer, Zeile anklicken für Details)',
     th_name: 'Name', th_club: 'Verein', th_live_ttr: 'Live-TTR', th_nuid: 'NUID/ID',
@@ -403,7 +456,15 @@ const I18N = {
   },
   en: {
     app_title: 'MyTT Assistant', app_sub: 'Web',
-    nav_search: '🔍 Search', nav_player: '👤 Player', nav_team: '📋 Team', nav_war: '⚔️ War Room', nav_more: '🏆 More',
+    nav_search: '🔍 Search', nav_player: '👤 Player', nav_team: '📋 Team', nav_war: '⚔️ War Room', nav_review: '📝 Review', nav_more: '🏆 More',
+    ph_review_me: 'My NUID, e.g. NU7535', ph_review_opp: 'Opponent NUID, e.g. NU59787', btn_review: '📝 Review',
+    hint_review: 'Lists every past encounter (score, per-game scores, pre-match win expectancy) and lets you keep your own review notes, filed per opponent. The ⚔ next to an opponent in the TTR history jumps straight here.',
+    loading_review: 'Aggregating encounters...', no_encounters: 'No encounters between {a} and {b}.',
+    review_title: '📝 Head-to-Head: {a} vs {b}',
+    sum_played: 'Played', sum_record: 'W-L', sum_winrate: 'Win rate', sum_sets: 'Sets', sum_points: 'Points',
+    th_game_scores: 'Game scores', th_opp_ttr: 'Opp. TTR', th_expected: 'Expected', th_event: 'Event',
+    note_title: '✍️ My Review Notes', note_ph: "Opponent's style, tactical takeaways, what to watch next time… (filed per opponent, stored locally)",
+    btn_save_note: 'Save note', note_saved: '✓ Saved', note_updated: 'Last updated: {time}',
     opt_players: 'Players', opt_clubs: 'Clubs',
     ph_search: 'e.g. Dang Qiu / Borussia', btn_search: 'Search',
     hint_search: 'After searching players, click a row to view TTR history or club teams.',
@@ -438,7 +499,7 @@ const I18N = {
     err_network: 'Cannot reach the server. Please make sure the backend is running (python web.py).',
     err_http: 'Request failed (HTTP {status})',
     err_parse: 'Server response could not be parsed (not JSON).',
-    hist_search: '🕘 Search History', clear: 'Clear',
+    hist_search: '🕘 Search History', clear: 'Clear', btn_back: '← Back', btn_forward: 'Forward →',
     searching_players: 'Searching players "{q}"...', no_players: 'No players found for "{q}".',
     search_players_title: '🔍 Player search: {q} ({count} results, click a row for details)',
     th_name: 'Name', th_club: 'Club', th_live_ttr: 'Live TTR', th_nuid: 'NUID/ID',
@@ -488,6 +549,7 @@ function applyI18n() {
   document.querySelectorAll('[data-i18n-ph]').forEach(el => { el.placeholder = t(el.dataset.i18nPh); });
   $('lang').value = LANG;
   updateCacheBtn();
+  updateNavBtns();
   refreshToken();
 }
 
@@ -623,12 +685,47 @@ function showError(msg) {
 function card(title, inner) {
   return `<div class="card">${title ? `<div class="panel-title">${title}</div>` : ''}<div class="scroll">${inner}</div></div>`;
 }
-let lastRun = null;  // 记录上一次数据加载动作，Token 变化后可自动重跑
+// ---------- 浏览历史栈：可逐级返回 / 前进（同浏览器语义）----------
+const views = [];               // [{text, fn}]，末项为当前视图
+const forwardViews = [];        // 被"返回"弹出的视图，供前进使用
+let lastRun = null;             // 重跑当前视图（Token 变化后刷新用）
+
 async function run(text, fn) {
-  lastRun = () => run(text, fn);
-  loading(text);
-  try { await fn(); } catch (e) { showError(e.message); }
+  views.push({text, fn});
+  forwardViews.length = 0;      // 新操作作废原有的前进历史
+  await execView();
 }
+async function execView() {
+  const v = views[views.length - 1];
+  if (!v) return;
+  lastRun = execView;
+  loading(v.text);
+  try { await v.fn(); } catch (e) { showError(e.message); }
+  updateNavBtns();
+}
+function goBack() {
+  if (views.length < 2) return;
+  forwardViews.push(views.pop());
+  execView();
+}
+function goForward() {
+  if (!forwardViews.length) return;
+  views.push(forwardViews.pop());
+  execView();
+}
+function updateNavBtns() {
+  const back = $('backBtn'), fwd = $('fwdBtn');
+  back.classList.toggle('show', views.length > 1);
+  back.textContent = t('btn_back');
+  fwd.classList.toggle('show', forwardViews.length > 0);
+  fwd.textContent = t('btn_forward');
+}
+// Alt+← 返回，Alt+→ 前进
+addEventListener('keydown', e => {
+  if (!e.altKey) return;
+  if (e.key === 'ArrowLeft') { e.preventDefault(); goBack(); }
+  else if (e.key === 'ArrowRight') { e.preventDefault(); goForward(); }
+});
 
 function ttrHtml(v) {
   if (v == null || v === '' || String(v).toLowerCase() === 'n/a') return '<span class="red">N/A</span>';
@@ -844,7 +941,9 @@ function historyFor(nuid, clicktt_id) {
           ? `<span class="score" data-games="${games.join(',')}">${score}</span>` : score;
         return `<tr><td>${date}</td><td class="num">${dHtml}</td><td class="num">${esc(ev.ttr_after ?? '')}</td>
           <td class="ctr ${win ? 'green' : 'red'}">${scoreCell}</td>
-          <td>${nameLink(m.other_person_name || t('unknown'), m.other_person_id)} <span class="dim">(${esc(m.other_ttr ?? '?')})</span></td></tr>`;
+          <td>${nameLink(m.other_person_name || t('unknown'), m.other_person_id)} <span class="dim">(${esc(m.other_ttr ?? '?')})</span>${
+            m.other_person_id ? `<span class="h2h" title="${t('btn_review')}" onclick="reviewFor('${esc(nuid)}','${esc(m.other_person_id)}')">⚔</span>` : ''
+          }</td></tr>`;
       });
     }).join('');
     result.innerHTML = card(t('history_title', {name: esc(data.person_name || nuid), ttr: esc(data.ttr ?? 'N/A'), count: events.length}),
@@ -976,6 +1075,89 @@ function doMeetingLive() {
         ? `<table><tr><th class="num">${t('th_match_no')}</th><th>${t('th_matchup')}</th><th>${t('th_state')}</th><th class="ctr">${t('th_score')}</th></tr>${rows}</table>`
         : `<span class="dim">${t('no_live_detail')}</span>`);
   });
+}
+
+// ---------- 赛后复盘 ----------
+function doReview() {
+  const me = $('reviewMe').value.trim(), opp = $('reviewOpp').value.trim();
+  if (!me || !opp) return;
+  HISTORY.add('reviewMe', me); HISTORY.add('reviewOpp', opp);
+  reviewFor(me, opp);
+}
+// 从任意位置进入复盘（如 TTR 历史表里的 ⚔）
+function reviewFor(me, opp) {
+  $('reviewMe').value = me; $('reviewOpp').value = opp;
+  document.querySelector('nav button[data-tab="review"]').click();
+  result.scrollIntoView({behavior: 'smooth', block: 'start'});
+  run(t('loading_review'), async () => {
+    const r = await api('/api/h2h', {nuid: me, opponent: opp});
+    if (r.error) return showError(typeof r.error === 'string' ? r.error : t('unauthorized'));
+    const s = r.summary;
+    if (!s.played) return showError(t('no_encounters', {a: esc(r.player_name), b: esc(r.opponent_name)}));
+
+    const rows = r.encounters.map(e => {
+      const gamesAttr = e.games.length ? ` class="score" data-games="${e.games.join(',')}"` : '';
+      const exp = e.expected == null ? '<span class="dim">-</span>'
+        : `<span class="${e.win === (e.expected >= 0.5) ? 'dim' : (e.win ? 'green' : 'red')}">${Math.round(e.expected * 100)}%</span>`;
+      const evName = String(e.event || '');
+      return `<tr>
+        <td>${esc(e.date)}</td>
+        <td class="ctr ${e.win ? 'green' : 'red'}"><span${gamesAttr}>${e.own_sets}:${e.other_sets}</span></td>
+        <td class="dim">${e.games.map(esc).join(' ')}</td>
+        <td class="num">${ttrHtml(e.opponent_ttr)}</td>
+        <td class="ctr">${exp}</td>
+        <td class="dim">${esc(evName.includes('|') ? evName.split('|').pop().trim() : evName)}</td></tr>`;
+    }).join('');
+
+    const rate = Math.round(s.wins / s.played * 100);
+    result.innerHTML = `
+      <div class="card">
+        <div class="panel-title">${t('review_title', {a: esc(r.player_name), b: esc(r.opponent_name)})}</div>
+        <div class="sumbar">
+          <div><span class="k">${t('sum_played')}</span><span class="v">${s.played}</span></div>
+          <div><span class="k">${t('sum_record')}</span><span class="v"><span class="green">${s.wins}</span> : <span class="red">${s.losses}</span></span></div>
+          <div><span class="k">${t('sum_winrate')}</span><span class="v">${rate}%</span></div>
+          <div><span class="k">${t('sum_sets')}</span><span class="v">${s.sets_won}:${s.sets_lost}</span></div>
+          <div><span class="k">${t('sum_points')}</span><span class="v">${s.games_won}:${s.games_lost}</span></div>
+        </div>
+        <div class="scroll"><table>
+          <tr><th>${t('th_date')}</th><th class="ctr">${t('th_score')}</th><th>${t('th_game_scores')}</th>
+              <th class="num">${t('th_opp_ttr')}</th><th class="ctr">${t('th_expected')}</th><th>${t('th_event')}</th></tr>
+          ${rows}
+        </table></div>
+      </div>
+      <div class="card">
+        <div class="panel-title">${t('note_title')}</div>
+        <textarea id="noteBox" placeholder="${t('note_ph')}"></textarea>
+        <div class="row" style="margin-top:10px;align-items:center">
+          <button class="btn" onclick="saveNote('${esc(me)}:${esc(opp)}')">${t('btn_save_note')}</button>
+          <span id="noteStatus" class="hint" style="margin:0"></span>
+        </div>
+      </div>`;
+    loadNote(`${me}:${opp}`);
+  });
+}
+
+async function loadNote(key) {
+  try {
+    const d = await api('/api/notes', {key});
+    const box = $('noteBox');
+    if (box) box.value = d.text || '';
+    if (d.updated) $('noteStatus').textContent = t('note_updated', {time: new Date(d.updated * 1000).toLocaleString()});
+  } catch {}
+}
+async function saveNote(key) {
+  const text = $('noteBox').value;
+  try {
+    const r = await fetch('/api/notes', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({key, text}),
+    });
+    const d = await r.json();
+    $('noteStatus').innerHTML = d.ok
+      ? `<span class="note-saved">${t('note_saved')}</span>`
+      : `<span class="red">${esc(d.error || '')}</span>`;
+  } catch (e) { $('noteStatus').textContent = t('req_failed') + e.message; }
 }
 
 // ---------- 初始化 ----------

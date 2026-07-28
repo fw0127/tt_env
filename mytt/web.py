@@ -12,7 +12,7 @@ from fastapi import Depends, FastAPI
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from . import auth, cache
+from . import auth, cache, review
 from .analysis import collect_team_analysis, collect_war_room
 from .api import MyTTApi, clean_roster
 
@@ -186,3 +186,31 @@ def league_table(association: str, league_id: str) -> Dict[str, Any]:
 @app.get("/api/meeting/{meeting_id}/live")
 def meeting_live(meeting_id: str) -> Dict[str, Any]:
     return _api.get_meeting_live(meeting_id)
+
+
+# ---------- 赛后复盘 ----------
+
+class NoteBody(BaseModel):
+    key: str
+    text: str = ""
+
+
+@app.get("/api/h2h")
+def head_to_head(nuid: str, opponent: str) -> Dict[str, Any]:
+    """两名球员的全部交手记录（从 TTR 历史聚合）。"""
+    return review.head_to_head(_api, nuid, opponent)
+
+
+@app.get("/api/notes")
+def get_note(key: str) -> Dict[str, Any]:
+    return review.get_note(key)
+
+
+@app.get("/api/notes/all")
+def list_notes() -> Dict[str, Any]:
+    return {"notes": review.list_notes()}
+
+
+@app.post("/api/notes")
+def save_note(body: NoteBody) -> Dict[str, Any]:
+    return review.save_note(body.key.strip(), body.text)
