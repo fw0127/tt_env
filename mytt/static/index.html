@@ -90,6 +90,8 @@
   }
   #noteBox:focus { border-color: var(--accent); }
   .note-saved { color: var(--green); font-size: 12px; }
+  .sparkwrap { margin: 0 0 16px; }
+  #spark { width: 100%; height: 92px; display: block; cursor: crosshair; }
   #tooltip {
     position: absolute; z-index: 60; display: none; pointer-events: none; white-space: nowrap;
     background: var(--panel2); border: 1px solid var(--line); border-radius: 8px;
@@ -358,6 +360,7 @@ const I18N = {
     unauthorized: '未授权：该接口需要登录，请设置有效的 Cookie Token。', no_history: '未获取到历史数据: {info}',
     history_title: '📈 {name} · 当前 TTR {ttr} · 最近 {count} 场', unknown: '未知',
     th_date: '日期', th_delta: '变动', th_after: '赛后', th_score: '比分', th_opponent: '对手 (TTR)',
+    stat_current: '当前 TTR', stat_max: '最高 TTR', stat_span: '生涯跨度', stat_records: ' 场',
     loading_roster: '正在获取阵容...', no_roster: '未获取到球队阵容，请检查 teamId。',
     roster_title: '📋 球队阵容 (TeamID: {id})', th_rank: '排名', th_internal_id: 'Internal ID',
     analyzing_team: '正在分析球队（逐人获取实时 TTR，稍等）...', analysis_title: '🔍 球队分析 (TeamID: {id})',
@@ -436,6 +439,7 @@ const I18N = {
     unauthorized: 'Nicht autorisiert: Anmeldung erforderlich, bitte gültigen Cookie-Token setzen.', no_history: 'Kein Verlauf erhalten: {info}',
     history_title: '📈 {name} · Aktuelle TTR {ttr} · Letzte {count} Spiele', unknown: 'Unbekannt',
     th_date: 'Datum', th_delta: 'Änd.', th_after: 'Nachher', th_score: 'Satz', th_opponent: 'Gegner (TTR)',
+    stat_current: 'Aktuelle TTR', stat_max: 'Höchste TTR', stat_span: 'Zeitraum', stat_records: ' Spiele',
     loading_roster: 'Kader wird geladen...', no_roster: 'Kein Kader erhalten, bitte Team-ID prüfen.',
     roster_title: '📋 Kader (Team-ID: {id})', th_rank: 'Rang', th_internal_id: 'Interne ID',
     analyzing_team: 'Team wird analysiert (Live-TTR pro Spieler, bitte warten)...', analysis_title: '🔍 Teamanalyse (Team-ID: {id})',
@@ -514,6 +518,7 @@ const I18N = {
     unauthorized: 'Unauthorized: this endpoint requires login, please set a valid Cookie Token.', no_history: 'No history returned: {info}',
     history_title: '📈 {name} · Current TTR {ttr} · Last {count} games', unknown: 'Unknown',
     th_date: 'Date', th_delta: 'Change', th_after: 'After', th_score: 'Score', th_opponent: 'Opponent (TTR)',
+    stat_current: 'Current TTR', stat_max: 'Peak TTR', stat_span: 'Career span', stat_records: ' matches',
     loading_roster: 'Fetching roster...', no_roster: 'No roster returned, please check the team ID.',
     roster_title: '📋 Roster (Team ID: {id})', th_rank: 'Rank', th_internal_id: 'Internal ID',
     analyzing_team: 'Analysing team (live TTR per player, please wait)...', analysis_title: '🔍 Team Analysis (Team ID: {id})',
@@ -748,6 +753,76 @@ function nameLink(name, nuid) {
   name = String(name ?? '').trim() || '-';
   return nuid ? `<span class="pname" onclick="historyFor('${esc(String(nuid))}')">${esc(name)}</span>` : esc(name);
 }
+// ---------- TTR 生涯曲线缩略图（单序列折线，配色经 validate_palette 校验）----------
+const SPARK = {W: 600, H: 92, PAD: 8, LINE: '#3987e5', PEAK: '#c98500'};
+let sparkPts = [];   // [{x, y, t, v}] 供悬停查找
+
+function sparkline(series) {
+  if (series.length < 2) return '';
+  const {W, H, PAD, LINE, PEAK} = SPARK;
+  const ts = series.map(p => p.t), vs = series.map(p => p.v);
+  const t0 = Math.min(...ts), t1 = Math.max(...ts), v0 = Math.min(...vs), v1 = Math.max(...vs);
+  const X = t => PAD + (t - t0) / (t1 - t0 || 1) * (W - 2 * PAD);
+  const Y = v => H - PAD - (v - v0) / (v1 - v0 || 1) * (H - 2 * PAD);
+
+  sparkPts = series.map(p => ({x: X(p.t), y: Y(p.v), t: p.t, v: p.v}));
+  const d = sparkPts.map((p, i) => `${i ? 'L' : 'M'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+  const area = `M${sparkPts[0].x.toFixed(1)},${H - PAD} ` +
+    sparkPts.map(p => `L${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ') +
+    ` L${sparkPts[sparkPts.length - 1].x.toFixed(1)},${H - PAD} Z`;
+
+  const peak = sparkPts[vs.indexOf(v1)];
+  const last = sparkPts[sparkPts.length - 1];
+  // 标记点用「零长度圆头线条」绘制：非缩放描边，故以屏幕像素为单位，
+  // 不会被 preserveAspectRatio="none" 的横向拉伸压成椭圆。
+  const dotMark = (p, color, w = 8, id = '') =>
+    `<line ${id && `id="${id}"`} x1="${p.x.toFixed(1)}" y1="${p.y.toFixed(1)}" x2="${p.x.toFixed(1)}" y2="${p.y.toFixed(1)}"
+      stroke="${color}" stroke-width="${w}" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`;
+
+  return `<svg id="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img">
+    <path d="${area}" fill="${LINE}" opacity=".10"/>
+    <path d="${d}" fill="none" stroke="${LINE}" stroke-width="2" stroke-linejoin="round"
+          stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+    ${dotMark(peak, 'var(--panel)', 12)}${dotMark(peak, PEAK)}
+    ${dotMark(last, 'var(--panel)', 12)}${dotMark(last, LINE)}
+    <line id="sparkCross" x1="0" y1="0" x2="0" y2="${H}" stroke="var(--dim)" stroke-width="1"
+          vector-effect="non-scaling-stroke" opacity="0"/>
+    <line id="sparkRing" x1="0" y1="0" x2="0" y2="0" stroke="var(--panel)" stroke-width="12"
+          stroke-linecap="round" vector-effect="non-scaling-stroke" opacity="0"/>
+    <line id="sparkDot" x1="0" y1="0" x2="0" y2="0" stroke="${LINE}" stroke-width="8"
+          stroke-linecap="round" vector-effect="non-scaling-stroke" opacity="0"/>
+  </svg>`;
+}
+
+// 悬停：十字线 + 最近点提示（复用全局 #tooltip）
+function wireSpark() {
+  const svg = $('spark');
+  if (!svg || !sparkPts.length) return;
+  const cross = $('sparkCross'), dot = $('sparkDot'), ring = $('sparkRing');
+  svg.addEventListener('mousemove', e => {
+    const r = svg.getBoundingClientRect();
+    const vx = (e.clientX - r.left) / r.width * SPARK.W;
+    let best = sparkPts[0];
+    for (const p of sparkPts) if (Math.abs(p.x - vx) < Math.abs(best.x - vx)) best = p;
+    cross.setAttribute('x1', best.x); cross.setAttribute('x2', best.x); cross.setAttribute('opacity', '.5');
+    for (const el of [ring, dot]) {
+      el.setAttribute('x1', best.x); el.setAttribute('x2', best.x);
+      el.setAttribute('y1', best.y); el.setAttribute('y2', best.y);
+      el.setAttribute('opacity', '1');
+    }
+    tooltip.innerHTML = `<b>${best.v}</b> <span class="dim">${new Date(best.t).toISOString().slice(0, 10)}</span>`;
+    tooltip.classList.add('show');
+    const px = r.left + scrollX + best.x / SPARK.W * r.width;
+    tooltip.style.left = Math.max(scrollX + 8, Math.min(px - tooltip.offsetWidth / 2,
+      scrollX + innerWidth - tooltip.offsetWidth - 8)) + 'px';
+    tooltip.style.top = (r.top + scrollY - tooltip.offsetHeight - 6) + 'px';
+  });
+  svg.addEventListener('mouseleave', () => {
+    for (const el of [cross, ring, dot]) el.setAttribute('opacity', '0');
+    hideTip();
+  });
+}
+
 // 从一场比赛提取各局比分（跳过未打的 0:0 局），如 ['6:11','11:8',...]
 function gameScores(m) {
   const games = [];
@@ -946,8 +1021,29 @@ function historyFor(nuid, clicktt_id) {
           }</td></tr>`;
       });
     }).join('');
+    // 生涯 TTR 序列（全部记录，非表格里的最近 15 场）
+    const series = (data.event || [])
+      .map(e => ({t: Date.parse((e.event_date_time || '').replace(' ', 'T')), v: Number(e.ttr_after)}))
+      .filter(p => !isNaN(p.t) && p.v)
+      .sort((a, b) => a.t - b.t);
+
+    const maxTtr = data.max_ttr ?? (series.length ? Math.max(...series.map(p => p.v)) : null);
+    const maxDate = (data.max_ttr_date || '').slice(0, 7);       // 年月 YYYY-MM
+    const span = series.length
+      ? `${new Date(series[0].t).getFullYear()}–${new Date(series[series.length - 1].t).getFullYear()}` : '-';
+
+    const statBar = `<div class="sumbar">
+      <div><span class="k">${t('stat_current')}</span><span class="v">${esc(data.ttr ?? 'N/A')}</span></div>
+      <div><span class="k">${t('stat_max')}</span><span class="v" style="color:${SPARK.PEAK}">${esc(maxTtr ?? 'N/A')}</span>
+        ${maxDate ? ` <span class="dim">${esc(maxDate)}</span>` : ''}</div>
+      <div><span class="k">${t('stat_span')}</span><span class="v">${esc(span)}</span>
+        <span class="dim">${series.length}${t('stat_records')}</span></div>
+    </div>`;
+
     result.innerHTML = card(t('history_title', {name: esc(data.person_name || nuid), ttr: esc(data.ttr ?? 'N/A'), count: events.length}),
+      statBar + (series.length > 1 ? `<div class="sparkwrap">${sparkline(series)}</div>` : '') +
       `<table><tr><th>${t('th_date')}</th><th class="num">${t('th_delta')}</th><th class="num">${t('th_after')}</th><th class="ctr">${t('th_score')}</th><th>${t('th_opponent')}</th></tr>${rows}</table>`);
+    wireSpark();
   });
 }
 
