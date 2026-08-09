@@ -2,14 +2,16 @@
 
 启动: python web.py  （或 uvicorn mytt.web:app）
 """
+import base64
 import os
+import secrets
 import time
 from pathlib import Path
 from typing import Any, Dict, Optional
 
 from dotenv import dotenv_values, load_dotenv
-from fastapi import Depends, FastAPI
-from fastapi.responses import FileResponse
+from fastapi import Depends, FastAPI, Request
+from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
 
 from . import auth, cache, favorites, review
@@ -77,6 +79,28 @@ def _token_keeper():
 
 
 app = FastAPI(title="MyTT Web", docs_url="/docs", dependencies=[Depends(_cache_control), Depends(_token_keeper)])
+
+# 可选的访问口令：设了 MYTT_WEB_PASSWORD 才生效（对外监听时强烈建议设上，
+# 否则能连到端口的人就能直接用你的 mytischtennis.de 登录态）。
+# 浏览器原生弹框，用户名随便填；HTTP 明文传输，仅适合局域网/隧道内使用。
+WEB_PASSWORD = os.getenv("MYTT_WEB_PASSWORD", "")
+
+
+@app.middleware("http")
+async def _require_password(request: Request, call_next):
+    if not WEB_PASSWORD:
+        return await call_next(request)
+    header = request.headers.get("authorization", "")
+    ok = False
+    if header.startswith("Basic "):
+        try:
+            _, _, pw = base64.b64decode(header[6:]).decode("utf-8", "replace").partition(":")
+            ok = secrets.compare_digest(pw, WEB_PASSWORD)
+        except Exception:
+            ok = False
+    if not ok:
+        return Response(status_code=401, headers={"WWW-Authenticate": 'Basic realm="MyTT"'})
+    return await call_next(request)
 
 
 class TokenBody(BaseModel):
