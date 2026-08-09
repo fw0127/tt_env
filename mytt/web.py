@@ -12,7 +12,7 @@ from fastapi import Depends, FastAPI
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from . import auth, cache, review
+from . import auth, cache, favorites, review
 from .analysis import collect_team_analysis, collect_war_room
 from .api import MyTTApi, clean_roster
 
@@ -214,3 +214,33 @@ def list_notes() -> Dict[str, Any]:
 @app.post("/api/notes")
 def save_note(body: NoteBody) -> Dict[str, Any]:
     return review.save_note(body.key.strip(), body.text)
+
+
+# ---------- 关注列表 ----------
+
+class FavBody(BaseModel):
+    kind: str
+    key: str
+    name: str = ""
+    extra: Optional[Dict[str, Any]] = None
+
+
+@app.get("/api/favorites")
+def favorites_list(kind: str | None = None) -> Dict[str, Any]:
+    return {"favorites": favorites.list_favorites(kind)}
+
+
+@app.post("/api/favorites")
+def favorites_add(body: FavBody) -> Dict[str, Any]:
+    return favorites.add(body.kind, body.key, body.name, body.extra)
+
+
+@app.delete("/api/favorites")
+def favorites_remove(kind: str, key: str) -> Dict[str, Any]:
+    return favorites.remove(kind, key)
+
+
+@app.get("/api/favorites/overview")
+def favorites_overview() -> Dict[str, Any]:
+    """关注面板：球员实时 TTR 与近况、球队下场比赛、俱乐部球队数。"""
+    return favorites.overview(_api)

@@ -76,6 +76,11 @@
   .score { cursor: help; border-bottom: 1px dotted currentColor; }
   .h2h { cursor: pointer; color: var(--accent2); margin-left: 6px; font-size: 12px; }
   .h2h:hover { filter: brightness(1.3); }
+  .fav { cursor: pointer; color: var(--dim); font-size: 15px; user-select: none; line-height: 1; }
+  .fav:hover { color: var(--accent2); }
+  .fav.on { color: var(--accent2); }
+  tr.off td { opacity: .38; }        /* 关注面板里刚取消关注的行 */
+  .fav-title { margin-left: 8px; }
   .sumbar {
     display: flex; flex-wrap: wrap; gap: 18px; padding: 12px 16px; margin-bottom: 14px;
     background: linear-gradient(135deg, rgba(56,189,248,.10), rgba(245,158,11,.08));
@@ -166,6 +171,7 @@
     <button data-tab="team" data-i18n="nav_team">📋 球队</button>
     <button data-tab="war" data-i18n="nav_war">⚔️ 作战室</button>
     <button data-tab="review" data-i18n="nav_review">📝 复盘</button>
+    <button data-tab="fav" data-i18n="nav_fav">⭐ 关注</button>
     <button data-tab="more" data-i18n="nav_more">🏆 更多</button>
   </nav>
 
@@ -225,6 +231,16 @@
         <button class="btn" onclick="doReview()" data-i18n="btn_review">📝 复盘</button>
       </div>
       <p class="hint" data-i18n="hint_review">列出两人的全部交手记录（比分、各局局分、赛前胜率预期），并可写下你自己的复盘笔记，按对手归档。TTR 历史表中对手名旁的 ⚔ 可直接进入复盘。</p>
+    </div>
+  </section>
+
+  <section id="tab-fav">
+    <div class="card">
+      <div class="row">
+        <button class="btn" onclick="doFavorites()" data-i18n="btn_fav_open">⭐ 打开关注面板</button>
+        <button class="btn alt" onclick="doFavorites(true)" data-i18n="btn_fav_refresh">🔄 刷新（跳过缓存）</button>
+      </div>
+      <p class="hint" data-i18n="hint_fav">在搜索结果、球员历史、球队与俱乐部页面点击 ☆ 即可加入关注。面板会汇总关注球员的实时 TTR 与近况、关注球队的下一场比赛、关注俱乐部的球队数量。</p>
     </div>
   </section>
 
@@ -302,7 +318,13 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 const I18N = {
   zh: {
     app_title: 'MyTT 助手', app_sub: 'Web 版',
-    nav_search: '🔍 搜索', nav_player: '👤 球员', nav_team: '📋 球队', nav_war: '⚔️ 作战室', nav_review: '📝 复盘', nav_more: '🏆 更多',
+    nav_search: '🔍 搜索', nav_player: '👤 球员', nav_team: '📋 球队', nav_war: '⚔️ 作战室', nav_review: '📝 复盘', nav_fav: '⭐ 关注', nav_more: '🏆 更多',
+    btn_fav_open: '⭐ 打开关注面板', btn_fav_refresh: '🔄 刷新（跳过缓存）',
+    hint_fav: '在搜索结果、球员历史、球队与俱乐部页面点击 ☆ 即可加入关注。面板会汇总关注球员的实时 TTR 与近况、关注球队的下一场比赛、关注俱乐部的球队数量。',
+    fav_add: '加入关注', fav_remove: '取消关注', fav_loading: '正在加载关注面板...',
+    fav_empty: '还没有关注任何对象。到搜索结果或详情页点击 ☆ 试试。',
+    fav_players: '⭐ 关注的球员', fav_teams: '⭐ 关注的球队', fav_clubs: '⭐ 关注的俱乐部',
+    th_next_match: '下场比赛', th_team_count: '球队数', fav_no_match: '暂无后续比赛', th_added: '关注于',
     ph_review_me: '我方球员 NUID，例如 NU7535', ph_review_opp: '对手 NUID，例如 NU59787', btn_review: '📝 复盘',
     hint_review: '列出两人的全部交手记录（比分、各局局分、赛前胜率预期），并可写下你自己的复盘笔记，按对手归档。TTR 历史表中对手名旁的 ⚔ 可直接进入复盘。',
     loading_review: '正在聚合交手记录...', no_encounters: '{a} 与 {b} 之间没有交手记录。',
@@ -381,7 +403,13 @@ const I18N = {
   },
   de: {
     app_title: 'MyTT Assistent', app_sub: 'Web',
-    nav_search: '🔍 Suche', nav_player: '👤 Spieler', nav_team: '📋 Team', nav_war: '⚔️ Gegneranalyse', nav_review: '📝 Nachbereitung', nav_more: '🏆 Mehr',
+    nav_search: '🔍 Suche', nav_player: '👤 Spieler', nav_team: '📋 Team', nav_war: '⚔️ Gegneranalyse', nav_review: '📝 Nachbereitung', nav_fav: '⭐ Merkliste', nav_more: '🏆 Mehr',
+    btn_fav_open: '⭐ Merkliste öffnen', btn_fav_refresh: '🔄 Aktualisieren (ohne Cache)',
+    hint_fav: 'Mit dem ☆ in Suchergebnissen, Spielerverlauf, Team- und Vereinsansichten etwas merken. Die Übersicht zeigt Live-TTR und Form der gemerkten Spieler, das nächste Spiel gemerkter Teams und die Teamanzahl gemerkter Vereine.',
+    fav_add: 'Merken', fav_remove: 'Nicht mehr merken', fav_loading: 'Merkliste wird geladen...',
+    fav_empty: 'Noch nichts gemerkt. Klicke in Suchergebnissen oder Detailansichten auf ☆.',
+    fav_players: '⭐ Gemerkte Spieler', fav_teams: '⭐ Gemerkte Teams', fav_clubs: '⭐ Gemerkte Vereine',
+    th_next_match: 'Nächstes Spiel', th_team_count: 'Teams', fav_no_match: 'Kein weiteres Spiel', th_added: 'Gemerkt am',
     ph_review_me: 'Eigene NUID, z.B. NU7535', ph_review_opp: 'Gegner-NUID, z.B. NU59787', btn_review: '📝 Nachbereitung',
     hint_review: 'Zeigt alle bisherigen Duelle (Satzergebnis, Satzverläufe, erwartete Siegchance) und bietet Platz für eigene Notizen, nach Gegner archiviert. Das ⚔ neben dem Gegnernamen im TTR-Verlauf führt direkt hierher.',
     loading_review: 'Duelle werden zusammengetragen...', no_encounters: 'Keine Duelle zwischen {a} und {b}.',
@@ -460,7 +488,13 @@ const I18N = {
   },
   en: {
     app_title: 'MyTT Assistant', app_sub: 'Web',
-    nav_search: '🔍 Search', nav_player: '👤 Player', nav_team: '📋 Team', nav_war: '⚔️ War Room', nav_review: '📝 Review', nav_more: '🏆 More',
+    nav_search: '🔍 Search', nav_player: '👤 Player', nav_team: '📋 Team', nav_war: '⚔️ War Room', nav_review: '📝 Review', nav_fav: '⭐ Watchlist', nav_more: '🏆 More',
+    btn_fav_open: '⭐ Open watchlist', btn_fav_refresh: '🔄 Refresh (skip cache)',
+    hint_fav: 'Click the ☆ in search results, player history, team and club views to follow. The panel shows live TTR and form for followed players, the next fixture for followed teams, and the team count for followed clubs.',
+    fav_add: 'Follow', fav_remove: 'Unfollow', fav_loading: 'Loading watchlist...',
+    fav_empty: 'Nothing followed yet. Click a ☆ in any search result or detail view.',
+    fav_players: '⭐ Followed Players', fav_teams: '⭐ Followed Teams', fav_clubs: '⭐ Followed Clubs',
+    th_next_match: 'Next match', th_team_count: 'Teams', fav_no_match: 'No upcoming match', th_added: 'Followed on',
     ph_review_me: 'My NUID, e.g. NU7535', ph_review_opp: 'Opponent NUID, e.g. NU59787', btn_review: '📝 Review',
     hint_review: 'Lists every past encounter (score, per-game scores, pre-match win expectancy) and lets you keep your own review notes, filed per opponent. The ⚔ next to an opponent in the TTR history jumps straight here.',
     loading_review: 'Aggregating encounters...', no_encounters: 'No encounters between {a} and {b}.',
@@ -753,6 +787,106 @@ function nameLink(name, nuid) {
   name = String(name ?? '').trim() || '-';
   return nuid ? `<span class="pname" onclick="historyFor('${esc(String(nuid))}')">${esc(name)}</span>` : esc(name);
 }
+// ---------- 关注列表（★ 收藏球员 / 球队 / 俱乐部，存后端 SQLite）----------
+const FAVS = new Map();               // "kind:key" -> 收藏项
+const favId = (kind, key) => kind + ':' + key;
+
+async function loadFavs() {
+  try {
+    const d = await api('/api/favorites');
+    FAVS.clear();
+    (d.favorites || []).forEach(f => FAVS.set(favId(f.kind, f.key), f));
+  } catch {}
+}
+
+// 渲染一个 ☆/★ 开关；整条收藏信息随 data-fav 一起带上，点击时无需再查表
+function favBtn(kind, key, name, extra) {
+  key = String(key ?? '').trim();
+  if (!key) return '';
+  const on = FAVS.has(favId(kind, key));
+  const payload = esc(JSON.stringify({kind, key, name: String(name ?? '') || key, extra: extra || null}));
+  return `<span class="fav${on ? ' on' : ''}" data-fav="${payload}" title="${t(on ? 'fav_remove' : 'fav_add')}"
+    onclick="event.stopPropagation();toggleFav(this)">${on ? '★' : '☆'}</span>`;
+}
+
+async function toggleFav(el) {
+  const it = JSON.parse(el.dataset.fav);
+  const id = favId(it.kind, it.key);
+  const wasOn = FAVS.has(id);
+  try {
+    if (wasOn) {
+      await fetch('/api/favorites?' + new URLSearchParams({kind: it.kind, key: it.key}), {method: 'DELETE'});
+      FAVS.delete(id);
+    } else {
+      await fetch('/api/favorites', {
+        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(it),
+      });
+      FAVS.set(id, it);
+    }
+  } catch (e) { return showError(e.message); }
+  // 同一对象可能在页面上出现多处（列表 + 标题），一并同步
+  document.querySelectorAll('[data-fav]').forEach(n => {
+    const o = JSON.parse(n.dataset.fav);
+    if (favId(o.kind, o.key) !== id) return;
+    n.classList.toggle('on', !wasOn);
+    n.textContent = wasOn ? '☆' : '★';
+    n.title = t(wasOn ? 'fav_add' : 'fav_remove');
+    const tr = n.closest('tr.fav-row');
+    if (tr) tr.classList.toggle('off', wasOn);   // 面板内取消关注：置灰但保留，可再点回来
+  });
+}
+
+function doFavorites(refresh) {
+  document.querySelector('nav button[data-tab="fav"]').click();
+  run(t('fav_loading'), async () => {
+    await loadFavs();
+    const d = await api('/api/favorites/overview', refresh ? {refresh: 'true'} : null);
+    const parts = [];
+
+    if (d.players.length) {
+      const rows = d.players.map(p => {
+        const [badge, trend] = formHtml(p.form);
+        return `<tr class="fav-row click" onclick="historyFor('${esc(p.key)}')">
+          <td>${nameLink(p.name, p.key)}</td>
+          <td class="dim">${esc((p.extra && p.extra.club) || '-')}</td>
+          <td class="num">${ttrHtml(p.ttr)}</td>
+          <td class="ctr">${badge}</td><td>${trend}</td>
+          <td class="ctr">${favBtn('player', p.key, p.name, p.extra)}</td></tr>`;
+      }).join('');
+      parts.push(card(t('fav_players'),
+        `<table><tr><th>${t('th_name')}</th><th>${t('th_club')}</th><th class="num">${t('th_live_ttr')}</th>
+         <th class="ctr">${t('th_recent')}</th><th>${t('th_trend')}</th><th class="ctr">★</th></tr>${rows}</table>`));
+    }
+
+    if (d.teams.length) {
+      const rows = d.teams.map(x => {
+        const n = x.next;
+        return `<tr class="fav-row click" onclick="teamAnalysisFor('${esc(x.key)}')">
+          <td>${esc(x.name)}</td><td class="dim">${esc(x.key)}</td>
+          <td>${n ? esc(n.date) : `<span class="dim">${t('fav_no_match')}</span>`}</td>
+          <td>${n ? esc(n.opponent || '-') : '<span class="dim">-</span>'}</td>
+          <td class="ctr">${favBtn('team', x.key, x.name, x.extra)}</td></tr>`;
+      }).join('');
+      parts.push(card(t('fav_teams'),
+        `<table><tr><th>${t('th_team')}</th><th>Team ID</th><th>${t('th_next_match')}</th>
+         <th>${t('th_opp_name')}</th><th class="ctr">★</th></tr>${rows}</table>`));
+    }
+
+    if (d.clubs.length) {
+      const rows = d.clubs.map(c => `<tr class="fav-row click" onclick="doClubTeamsWith('${esc(c.clubnr)}','${esc(c.org)}')">
+        <td>${esc(c.name)}</td><td class="dim">${esc(c.clubnr)}</td><td>${esc(c.org || '-')}</td>
+        <td class="num">${c.teams == null ? '<span class="dim">-</span>' : c.teams}</td>
+        <td class="ctr">${favBtn('club', c.key, c.name, c.extra)}</td></tr>`).join('');
+      parts.push(card(t('fav_clubs'),
+        `<table><tr><th>${t('th_club_name')}</th><th>${t('th_club_nr')}</th><th>${t('th_assoc')}</th>
+         <th class="num">${t('th_team_count')}</th><th class="ctr">★</th></tr>${rows}</table>`));
+    }
+
+    result.innerHTML = parts.length ? parts.join('')
+      : card(t('nav_fav'), `<span class="dim">${t('fav_empty')}</span>`);
+  });
+}
+
 // ---------- TTR 生涯曲线缩略图（单序列折线，配色经 validate_palette 校验）----------
 const SPARK = {W: 600, H: 92, PAD: 8, LINE: '#3987e5', PEAK: '#c98500'};
 let sparkPts = [];   // [{x, y, t, v}] 供悬停查找
@@ -920,14 +1054,16 @@ function doSearch() {
     if (!items.length) return showError(t('no_players', {q}));
     const rows = items.map((p, i) => {
       const pid = p.internal_id || p.person_id || '-';
+      const pname = ((p.lastname || '') + ' ' + (p.firstname || '')).trim();
       return `<tr class="click" onclick="playerActions(${i})">
-        <td>${esc((p.lastname || '') + ' ' + (p.firstname || ''))}</td>
+        <td>${esc(pname)}</td>
         <td class="dim">${esc(p.club_name || '-')}</td>
         <td class="num" id="ttr-${i}"><span class="dim">…</span></td>
-        <td class="dim">${esc(pid)}</td></tr>`;
+        <td class="dim">${esc(pid)}</td>
+        <td class="ctr">${favBtn('player', p.internal_id || '', pname, {club: p.club_name || ''})}</td></tr>`;
     }).join('');
     result.innerHTML = card(t('search_players_title', {q: esc(q), count: data.total_count ?? items.length}),
-      `<table><tr><th>${t('th_name')}</th><th>${t('th_club')}</th><th class="num">${t('th_live_ttr')}</th><th>${t('th_nuid')}</th></tr>${rows}</table>`);
+      `<table><tr><th>${t('th_name')}</th><th>${t('th_club')}</th><th class="num">${t('th_live_ttr')}</th><th>${t('th_nuid')}</th><th class="ctr">★</th></tr>${rows}</table>`);
     // 异步逐个补充 TTR
     for (let i = 0; i < items.length; i++) {
       const pid = items[i].internal_id || items[i].person_id;
@@ -944,7 +1080,7 @@ function playerActions(i) {
   const name = `${p.lastname || ''} ${p.firstname || ''}`.trim();
   const nuid = p.internal_id || '';
   const club = p.club_name || '';
-  result.insertAdjacentHTML('afterbegin', card(`👤 ${esc(name)}`,
+  result.insertAdjacentHTML('afterbegin', card(`👤 ${esc(name)} <span class="fav-title">${favBtn('player', nuid, name, {club})}</span>`,
     `<div class="row">
       ${nuid ? `<button class="btn" onclick="historyFor('${esc(nuid)}','${esc(p.person_id || '')}')">${t('btn_hist_short')}</button>` : `<span class="dim">${t('no_nuid')}</span>`}
       ${club ? `<button class="btn alt" onclick="clubTeamsByName('${esc(club)}')">${t('btn_club_teams')}</button>` : ''}
@@ -956,10 +1092,11 @@ function doSearchClubs(q) {
     const data = await api('/api/search/clubs', {q});
     const items = data.results || [];
     if (!items.length) return showError(t('no_club', {q}));
-    const rows = items.map(c => `<tr class="click" onclick="doClubTeamsWith('${esc(c.clubnr)}','${esc(c.organization_short)}')">
-      <td>${esc(c.clubname)}</td><td class="dim">${esc(c.clubnr)}</td><td>${esc(c.organization_short || '-')}</td></tr>`).join('');
+    const rows = items.map(c => `<tr class="click" onclick="doClubTeamsWith('${esc(c.clubnr)}','${esc(c.organization_short)}','${esc(c.clubname)}')">
+      <td>${esc(c.clubname)}</td><td class="dim">${esc(c.clubnr)}</td><td>${esc(c.organization_short || '-')}</td>
+      <td class="ctr">${favBtn('club', `${c.clubnr}:${c.organization_short || ''}`, c.clubname, {org: c.organization_short || ''})}</td></tr>`).join('');
     result.innerHTML = card(t('search_clubs_title', {q: esc(q)}),
-      `<table><tr><th>${t('th_club_name')}</th><th>${t('th_club_nr')}</th><th>${t('th_assoc')}</th></tr>${rows}</table>`);
+      `<table><tr><th>${t('th_club_name')}</th><th>${t('th_club_nr')}</th><th>${t('th_assoc')}</th><th class="ctr">★</th></tr>${rows}</table>`);
   });
 }
 
@@ -1040,7 +1177,8 @@ function historyFor(nuid, clicktt_id) {
         <span class="dim">${series.length}${t('stat_records')}</span></div>
     </div>`;
 
-    result.innerHTML = card(t('history_title', {name: esc(data.person_name || nuid), ttr: esc(data.ttr ?? 'N/A'), count: events.length}),
+    result.innerHTML = card(t('history_title', {name: esc(data.person_name || nuid), ttr: esc(data.ttr ?? 'N/A'), count: events.length})
+      + `<span class="fav-title">${favBtn('player', nuid, data.person_name || nuid)}</span>`,
       statBar + (series.length > 1 ? `<div class="sparkwrap">${sparkline(series)}</div>` : '') +
       `<table><tr><th>${t('th_date')}</th><th class="num">${t('th_delta')}</th><th class="num">${t('th_after')}</th><th class="ctr">${t('th_score')}</th><th>${t('th_opponent')}</th></tr>${rows}</table>`);
     wireSpark();
@@ -1050,9 +1188,11 @@ function historyFor(nuid, clicktt_id) {
 // ---------- 球队 ----------
 const teamRosterRows = players => players.map(p => {
   const nuid = p.nuid ?? p.internal_id;
+  const pname = p.name ?? ((p.lastname || '') + ' ' + (p.firstname || '')).trim();
   return `<tr><td class="num">${esc(p.rank ?? p.rank === 0 ? p.rank : '-')}</td>
-   <td>${nameLink(p.name ?? ((p.lastname || '') + ' ' + (p.firstname || '')), nuid)}</td>
-   <td class="dim">${esc(nuid ?? '-')}</td></tr>`;
+   <td>${nameLink(pname, nuid)}</td>
+   <td class="dim">${esc(nuid ?? '-')}</td>
+   <td class="ctr">${favBtn('player', nuid ?? '', pname)}</td></tr>`;
 }).join('');
 
 function doTeamPlayers() {
@@ -1061,20 +1201,28 @@ function doTeamPlayers() {
   run(t('loading_roster'), async () => {
     const data = await api(`/api/team/${encodeURIComponent(id)}/players`);
     if (!data.players.length) return showError(t('no_roster'));
-    result.innerHTML = card(t('roster_title', {id: esc(id)}),
-      `<table><tr><th class="num">${t('th_rank')}</th><th>${t('th_name')}</th><th>${t('th_internal_id')}</th></tr>${teamRosterRows(data.players)}</table>`);
+    result.innerHTML = card(t('roster_title', {id: esc(id)}) + teamFav(id),
+      `<table><tr><th class="num">${t('th_rank')}</th><th>${t('th_name')}</th><th>${t('th_internal_id')}</th><th class="ctr">★</th></tr>${teamRosterRows(data.players)}</table>`);
   });
 }
+// 球队标题旁的关注开关；没有队名时用 "Team {id}" 兜底
+const teamFav = (id, name) => `<span class="fav-title">${favBtn('team', id, name || 'Team ' + id)}</span>`;
+
 function doTeamAnalysis() {
   const id = $('teamId').value.trim(); if (!id) return;
   localStorage.setItem('mytt_team', id); HISTORY.add('team', id);
+  teamAnalysisFor(id);
+}
+function teamAnalysisFor(id, name) {
+  result.scrollIntoView({behavior: 'smooth', block: 'start'});
   run(t('analyzing_team'), async () => {
     const data = await api(`/api/team/${encodeURIComponent(id)}/analysis`);
     if (!data.players.length) return showError(t('no_roster'));
     const rows = data.players.map(p =>
-      `<tr><td class="num">${esc(p.rank)}</td><td>${nameLink(p.name, p.nuid)}</td><td class="dim">${esc(p.nuid)}</td><td class="num">${ttrHtml(p.ttr)}</td></tr>`).join('');
-    result.innerHTML = card(t('analysis_title', {id: esc(id)}),
-      `<table><tr><th class="num">${t('th_rank')}</th><th>${t('th_name')}</th><th>NUID</th><th class="num">${t('th_live_ttr')}</th></tr>${rows}</table>`);
+      `<tr><td class="num">${esc(p.rank)}</td><td>${nameLink(p.name, p.nuid)}</td><td class="dim">${esc(p.nuid)}</td>
+       <td class="num">${ttrHtml(p.ttr)}</td><td class="ctr">${favBtn('player', p.nuid, p.name)}</td></tr>`).join('');
+    result.innerHTML = card(t('analysis_title', {id: esc(id)}) + teamFav(id, name),
+      `<table><tr><th class="num">${t('th_rank')}</th><th>${t('th_name')}</th><th>NUID</th><th class="num">${t('th_live_ttr')}</th><th class="ctr">★</th></tr>${rows}</table>`);
   });
 }
 function doTeamSchedule() {
@@ -1086,9 +1234,10 @@ function doTeamSchedule() {
     const matches = data.data || [];
     if (!matches.length) return showError(t('no_schedule'));
     const rows = matches.map(m => `<tr><td>${esc((m.date || '-').slice(0, 10))}</td>
-      <td>${esc(m.opponent_team_name || '-')}</td><td class="dim">${esc(m.opponent_team_id ?? '-')}</td></tr>`).join('');
-    result.innerHTML = card(t('schedule_title', {id: esc(id), season: esc(season)}),
-      `<table><tr><th>${t('th_date')}</th><th>${t('th_opp_name')}</th><th>${t('th_opp_teamid')}</th></tr>${rows}</table>`);
+      <td>${esc(m.opponent_team_name || '-')}</td><td class="dim">${esc(m.opponent_team_id ?? '-')}</td>
+      <td class="ctr">${favBtn('team', m.opponent_team_id ?? '', m.opponent_team_name || '')}</td></tr>`).join('');
+    result.innerHTML = card(t('schedule_title', {id: esc(id), season: esc(season)}) + teamFav(id),
+      `<table><tr><th>${t('th_date')}</th><th>${t('th_opp_name')}</th><th>${t('th_opp_teamid')}</th><th class="ctr">★</th></tr>${rows}</table>`);
   });
 }
 
@@ -1102,28 +1251,33 @@ function doWarRoom() {
     const rows = r.players.map(p => {
       const [badge, trend] = formHtml(p.form);
       return `<tr><td class="num">${esc(p.rank)}</td><td>${nameLink(p.name, p.nuid)}</td>
-        <td class="num">${ttrHtml(p.ttr)}</td><td class="ctr">${badge}</td><td>${trend}</td></tr>`;
+        <td class="num">${ttrHtml(p.ttr)}</td><td class="ctr">${badge}</td><td>${trend}</td>
+        <td class="ctr">${favBtn('player', p.nuid, p.name)}</td></tr>`;
     }).join('');
     result.innerHTML = `
       <div class="card">
-        <div class="opp-banner">${t('war_locked')} <b>${esc(r.opponent_name)}</b> <span class="dim">(ID: ${esc(r.opponent_id)})</span><br>${t('war_date')} ${esc(r.date)}</div>
+        <div class="opp-banner">${t('war_locked')} <b>${esc(r.opponent_name)}</b> <span class="dim">(ID: ${esc(r.opponent_id)})</span>
+          ${favBtn('team', r.opponent_id, r.opponent_name)}<br>${t('war_date')} ${esc(r.date)}</div>
         <div class="panel-title">${t('war_report')}</div>
         <div class="scroll"><table>
-          <tr><th class="num">${t('th_rank_short')}</th><th>${t('th_player_name')}</th><th class="num">${t('th_live_ttr')}</th><th class="ctr">${t('th_recent')}</th><th>${t('th_trend')}</th></tr>${rows}
+          <tr><th class="num">${t('th_rank_short')}</th><th>${t('th_player_name')}</th><th class="num">${t('th_live_ttr')}</th><th class="ctr">${t('th_recent')}</th><th>${t('th_trend')}</th><th class="ctr">★</th></tr>${rows}
         </table></div>
       </div>`;
   });
 }
 
 // ---------- 更多 ----------
-async function renderClubTeams(clubNumber, organization) {
+async function renderClubTeams(clubNumber, organization, clubName) {
   const data = await api('/api/club/teams', {club_number: clubNumber, organization});
   const teams = data.data || [];
   if (!teams.length) return showError(t('no_club_teams'));
-  const rows = teams.map(x => `<tr><td>${esc(x.team_name || '-')}</td><td class="dim">${esc(x.league_name || '-')}</td>
-    <td class="num">${esc(x.team_id ?? '-')}</td><td class="num dim">${esc(x.group_id ?? '-')}</td></tr>`).join('');
-  result.innerHTML = card(t('club_teams_title', {club: esc(clubNumber), org: esc(organization)}),
-    `<table><tr><th>${t('th_team_name')}</th><th>${t('th_league_name')}</th><th class="num">Team ID</th><th class="num">Group ID</th></tr>${rows}</table>`);
+  const rows = teams.map(x => `<tr class="click" onclick="teamAnalysisFor('${esc(x.team_id ?? '')}','${esc(x.team_name || '')}')">
+    <td>${esc(x.team_name || '-')}</td><td class="dim">${esc(x.league_name || '-')}</td>
+    <td class="num">${esc(x.team_id ?? '-')}</td><td class="num dim">${esc(x.group_id ?? '-')}</td>
+    <td class="ctr">${favBtn('team', x.team_id ?? '', x.team_name || '')}</td></tr>`).join('');
+  const clubFav = favBtn('club', `${clubNumber}:${organization}`, clubName || `Club ${clubNumber}`, {org: organization});
+  result.innerHTML = card(t('club_teams_title', {club: esc(clubNumber), org: esc(organization)}) + `<span class="fav-title">${clubFav}</span>`,
+    `<table><tr><th>${t('th_team_name')}</th><th>${t('th_league_name')}</th><th class="num">Team ID</th><th class="num">Group ID</th><th class="ctr">★</th></tr>${rows}</table>`);
 }
 function doClubTeams() {
   const n = $('clubNumber').value.trim(), o = $('clubOrg').value.trim();
@@ -1131,7 +1285,7 @@ function doClubTeams() {
   HISTORY.add('clubNumber', n);
   run(t('loading_club_teams'), () => renderClubTeams(n, o));
 }
-function doClubTeamsWith(n, o) { run(t('loading_club_teams'), () => renderClubTeams(n, o)); }
+function doClubTeamsWith(n, o, name) { run(t('loading_club_teams'), () => renderClubTeams(n, o, name)); }
 
 function doLeagueTable() {
   const assoc = $('leagueAssoc').value.trim(), id = $('leagueId').value.trim();
@@ -1260,6 +1414,7 @@ async function saveNote(key) {
 $('teamId').value = localStorage.getItem('mytt_team') || '';
 $('warTeamId').value = localStorage.getItem('mytt_war') || '';
 applyI18n();  // 应用语言（内部会调用 updateCacheBtn + refreshToken）
+loadFavs();   // 预载关注列表，首次渲染的 ★/☆ 状态才正确
 </script>
 </body>
 </html>
