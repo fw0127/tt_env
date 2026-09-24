@@ -1,6 +1,7 @@
 """myTischtennis API 封装与数据整理工具。"""
 import hashlib
 import re
+import time
 from typing import Any, Dict, List
 from urllib.parse import quote
 
@@ -40,6 +41,11 @@ class MyTTApi:
 
     BASE_URL = "https://www.mytischtennis.de"
 
+    # 被站点限流（HTTP 429 + 人机验证页）后暂停联网的秒数；期间只读缓存，避免继续请求让封锁延长。
+    # 类属性：所有实例（Web 端 Token 切换会新建实例）共享同一个冷却期
+    RATE_LIMIT_COOLDOWN = 300
+    _blocked_until = 0.0
+
     def __init__(self, cookie_token: str = "") -> None:
         # 缓存按 Token 隔离：换 Token 后不会读到旧身份下的缓存数据
         self._cache_scope = hashlib.sha1(cookie_token.encode()).hexdigest()[:8] if cookie_token else "anon"
@@ -71,17 +77,38 @@ class MyTTApi:
     @staticmethod
     def _cacheable(result: Any) -> bool:
         """只缓存成功响应，错误结果不落盘。"""
-        return not (isinstance(result, dict) and "error" in result)
+        return not (isinstance(result, dict) and result.get("error"))
+
+    @classmethod
+    def _rate_limited(cls) -> Dict[str, Any] | None:
+        """仍在限流冷却期内时返回错误结果，否则 None。"""
+        left = int(cls._blocked_until - time.time())
+        if left <= 0:
+            return None
+        return {"error": f"mytischtennis.de 限流中（要求人机验证），{left // 60 + 1} 分钟内暂停联网，已缓存的数据仍可查看",
+                "status_code": 429}
+
+    @classmethod
+    def _check_rate_limit(cls, r: requests.Response) -> Dict[str, Any] | None:
+        """429 或人机验证页：开启冷却期并返回错误结果。"""
+        if r.status_code == 429 or "<title>Verifizierung</title>" in r.text[:2000]:
+            cls._blocked_until = time.time() + cls.RATE_LIMIT_COOLDOWN
+            return cls._rate_limited()
+        return None
 
     def _get(self, path: str, params: Dict[str, Any] | None = None) -> Dict[str, Any]:
         key = cache.make_key(self._cache_scope, "GET", path, params)
         cached = cache.get(key, path)
         if cached is not None:
             return cached
+        if blocked := self._rate_limited():
+            return blocked
 
         url = f"{self.BASE_URL}{path}"
         try:
             r = self.session.get(url, params=params, timeout=30)
+            if limited := self._check_rate_limit(r):
+                return limited
 
             # 401/403 说明 Token 可能失效
             if r.status_code in [401, 403]:
@@ -101,11 +128,15 @@ class MyTTApi:
         cached = cache.get(key, path)
         if cached is not None:
             return cached
+        if blocked := self._rate_limited():
+            return blocked
 
         url = f"{self.BASE_URL}{path}"
         try:
             # myTT 的搜索接口通常接收 Form Data 而非 JSON
             r = self.session.post(url, data=data, timeout=30)
+            if limited := self._check_rate_limit(r):
+                return limited
             try:
                 result = r.json()
             except Exception as e:

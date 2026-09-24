@@ -15,7 +15,7 @@ from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
 
 from . import auth, cache, favorites, review
-from .analysis import collect_team_analysis, collect_war_room
+from .analysis import collect_team_analysis, collect_war_room, team_season_matches
 from .api import MyTTApi, clean_roster
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -182,12 +182,21 @@ def team_players(team_id: str) -> Dict[str, Any]:
 
 @app.get("/api/team/{team_id}/analysis")
 def team_analysis(team_id: str) -> Dict[str, Any]:
-    return {"players": collect_team_analysis(_api, team_id)}
+    players = collect_team_analysis(_api, team_id)
+    # 阵容为空时带上原因（如被限流），前端据此提示而不是笼统的"请检查 teamId"
+    err = None if players else _api.get_team_players(team_id).get("error")
+    return {"players": players, "error": err}
 
 
 @app.get("/api/team/{team_id}/schedule")
 def team_schedule(team_id: str, season: str = "25--26") -> Dict[str, Any]:
     return _api.get_team_schedule_api(team_id, season)
+
+
+@app.get("/api/team/{team_id}/matches")
+def team_matches(team_id: str, association: str, group_id: str, season: str | None = None) -> Dict[str, Any]:
+    """本赛季比赛与结果。需要球队所在的协会与小组（俱乐部球队列表里有）。"""
+    return team_season_matches(_api, association, group_id, team_id, season)
 
 
 @app.get("/api/team/{team_id}/warroom")

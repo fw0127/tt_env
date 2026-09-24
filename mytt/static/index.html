@@ -131,6 +131,8 @@
   .overlay .box { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 22px; width: min(480px, 92vw); }
   .overlay h3 { margin-bottom: 12px; font-size: 16px; }
   .scroll { overflow-x: auto; }
+  td.date { white-space: nowrap; }
+  td.venue { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
   #suggest {
     position: absolute; z-index: 40; display: none; background: var(--panel2);
@@ -381,13 +383,14 @@ const I18N = {
     loading_history: '正在获取 TTR 历史...',
     unauthorized: '未授权：该接口需要登录，请设置有效的 Cookie Token。', no_history: '未获取到历史数据: {info}',
     history_title: '📈 {name} · 当前 TTR {ttr} · 最近 {count} 场', unknown: '未知',
-    th_date: '日期', th_delta: '变动', th_after: '赛后', th_score: '比分', th_opponent: '对手 (TTR)',
+    th_date: '日期', th_delta: '变动', th_after: '赛后', th_score: '比分', th_opponent: '对手 (TTR)', th_opp_club: '对手俱乐部',
     stat_current: '当前 TTR', stat_max: '最高 TTR', stat_span: '生涯跨度', stat_records: ' 场',
     loading_roster: '正在获取阵容...', no_roster: '未获取到球队阵容，请检查 teamId。',
     roster_title: '📋 球队阵容 (TeamID: {id})', th_rank: '排名', th_internal_id: 'Internal ID',
     analyzing_team: '正在分析球队（逐人获取实时 TTR，稍等）...', analysis_title: '🔍 球队分析 (TeamID: {id})',
     loading_schedule: '正在获取赛程...', no_schedule: '未获取到赛程。',
-    schedule_title: '📅 球队赛程 (TeamID: {id}, {season})', th_opp_name: '对手名称', th_opp_teamid: '对手 TeamID',
+    schedule_title: '📅 球队赛程 (TeamID: {id}, {season})',
+    tm_title: '📅 {league} · {season} 赛季比赛', tm_title_plain: '📅 本赛季比赛', tm_home: '主', tm_away: '客', tm_ha: '主/客', tm_venue: '场地', tm_played: '已赛', tm_wdl: '胜 / 平 / 负', tm_remaining: '未赛', tm_details: '查看单场详情', tm_no_meta: '不知道该球队所在的联赛小组，无法显示比赛。请从俱乐部的球队列表进入（从那里关注的球队之后也能直接显示）。', th_opp_name: '对手名称', th_opp_teamid: '对手 TeamID',
     war_loading: '🏟️ 正在同步赛程、侦察对手阵容并逐人分析（可能需要一分钟）...',
     war_locked: '🎯 下场对手锁定:', war_date: '📅 比赛日期:', war_report: '⚔️ 对手战力侦察报告',
     th_rank_short: '排', th_player_name: '选手姓名', th_recent: '近期状态', th_trend: '5场趋势',
@@ -466,13 +469,14 @@ const I18N = {
     loading_history: 'TTR-Verlauf wird geladen...',
     unauthorized: 'Nicht autorisiert: Anmeldung erforderlich, bitte gültigen Cookie-Token setzen.', no_history: 'Kein Verlauf erhalten: {info}',
     history_title: '📈 {name} · Aktuelle TTR {ttr} · Letzte {count} Spiele', unknown: 'Unbekannt',
-    th_date: 'Datum', th_delta: 'Änd.', th_after: 'Nachher', th_score: 'Satz', th_opponent: 'Gegner (TTR)',
+    th_date: 'Datum', th_delta: 'Änd.', th_after: 'Nachher', th_score: 'Satz', th_opponent: 'Gegner (TTR)', th_opp_club: 'Gegner-Verein',
     stat_current: 'Aktuelle TTR', stat_max: 'Höchste TTR', stat_span: 'Zeitraum', stat_records: ' Spiele',
     loading_roster: 'Kader wird geladen...', no_roster: 'Kein Kader erhalten, bitte Team-ID prüfen.',
     roster_title: '📋 Kader (Team-ID: {id})', th_rank: 'Rang', th_internal_id: 'Interne ID',
     analyzing_team: 'Team wird analysiert (Live-TTR pro Spieler, bitte warten)...', analysis_title: '🔍 Teamanalyse (Team-ID: {id})',
     loading_schedule: 'Spielplan wird geladen...', no_schedule: 'Kein Spielplan erhalten.',
-    schedule_title: '📅 Spielplan (Team-ID: {id}, {season})', th_opp_name: 'Gegner', th_opp_teamid: 'Gegner Team-ID',
+    schedule_title: '📅 Spielplan (Team-ID: {id}, {season})',
+    tm_title: '📅 {league} · Saison {season}', tm_title_plain: '📅 Spiele dieser Saison', tm_home: 'H', tm_away: 'A', tm_ha: 'H/A', tm_venue: 'Halle', tm_played: 'Gespielt', tm_wdl: 'S / U / N', tm_remaining: 'Offen', tm_details: 'Spielbericht anzeigen', tm_no_meta: 'Liga-Gruppe der Mannschaft unbekannt, Spiele können nicht angezeigt werden. Bitte über die Mannschaftsliste des Vereins öffnen (dort gefolgte Teams zeigen die Spiele danach direkt an).', th_opp_name: 'Gegner', th_opp_teamid: 'Gegner Team-ID',
     war_loading: '🏟️ Spielplan wird abgeglichen, Gegnerkader analysiert (kann eine Minute dauern)...',
     war_locked: '🎯 Nächster Gegner:', war_date: '📅 Spieltag:', war_report: '⚔️ Gegner-Stärkeanalyse',
     th_rank_short: 'Rg', th_player_name: 'Spielername', th_recent: 'Aktuelle Form', th_trend: 'Trend 5 Sp.',
@@ -551,13 +555,14 @@ const I18N = {
     loading_history: 'Fetching TTR history...',
     unauthorized: 'Unauthorized: this endpoint requires login, please set a valid Cookie Token.', no_history: 'No history returned: {info}',
     history_title: '📈 {name} · Current TTR {ttr} · Last {count} games', unknown: 'Unknown',
-    th_date: 'Date', th_delta: 'Change', th_after: 'After', th_score: 'Score', th_opponent: 'Opponent (TTR)',
+    th_date: 'Date', th_delta: 'Change', th_after: 'After', th_score: 'Score', th_opponent: 'Opponent (TTR)', th_opp_club: 'Opp. Club',
     stat_current: 'Current TTR', stat_max: 'Peak TTR', stat_span: 'Career span', stat_records: ' matches',
     loading_roster: 'Fetching roster...', no_roster: 'No roster returned, please check the team ID.',
     roster_title: '📋 Roster (Team ID: {id})', th_rank: 'Rank', th_internal_id: 'Internal ID',
     analyzing_team: 'Analysing team (live TTR per player, please wait)...', analysis_title: '🔍 Team Analysis (Team ID: {id})',
     loading_schedule: 'Fetching schedule...', no_schedule: 'No schedule returned.',
-    schedule_title: '📅 Team Schedule (Team ID: {id}, {season})', th_opp_name: 'Opponent', th_opp_teamid: 'Opponent Team ID',
+    schedule_title: '📅 Team Schedule (Team ID: {id}, {season})',
+    tm_title: '📅 {league} · {season} season', tm_title_plain: '📅 This season\'s matches', tm_home: 'H', tm_away: 'A', tm_ha: 'H/A', tm_venue: 'Venue', tm_played: 'Played', tm_wdl: 'W / D / L', tm_remaining: 'Remaining', tm_details: 'Show match details', tm_no_meta: 'The team\'s league group is unknown, so matches can\'t be shown. Open it from the club\'s team list (teams followed from there will show matches directly).', th_opp_name: 'Opponent', th_opp_teamid: 'Opponent Team ID',
     war_loading: '🏟️ Syncing schedule, scouting opponent roster and analysing each player (may take a minute)...',
     war_locked: '🎯 Next opponent:', war_date: '📅 Match date:', war_report: '⚔️ Opponent Scouting Report',
     th_rank_short: '#', th_player_name: 'Player Name', th_recent: 'Recent Form', th_trend: 'Trend (5)',
@@ -861,7 +866,7 @@ function doFavorites(refresh) {
     if (d.teams.length) {
       const rows = d.teams.map(x => {
         const n = x.next;
-        return `<tr class="fav-row click" onclick="teamAnalysisFor('${esc(x.key)}')">
+        return `<tr class="fav-row click" onclick="teamAnalysisFor('${esc(x.key)}','${esc(x.name || '')}',${metaArg(x.extra)})">
           <td>${esc(x.name)}</td><td class="dim">${esc(x.key)}</td>
           <td>${n ? esc(n.date) : `<span class="dim">${t('fav_no_match')}</span>`}</td>
           <td>${n ? esc(n.opponent || '-') : '<span class="dim">-</span>'}</td>
@@ -1125,6 +1130,12 @@ function doPlayerHistory() {
   HISTORY.add('player', nuid);
   historyFor(nuid, '');
 }
+// 赛事名：联赛为 "KLC E-Erwachsene | 主队 : 客队"，取 | 前的联赛名；杯赛/锦标赛原样
+const competitionName = name => name.includes('|') ? name.split('|')[0].trim() : name;
+// 俱乐部名：队名去掉末尾的队伍编号（"TV Zuffenhausen IV" → "TV Zuffenhausen"）。
+// 只去罗马数字，阿拉伯数字可能是建队年份（如 "TV Stuttgart 1846"）
+const clubOfTeam = team => (team || '').replace(/\s+[IVX]+$/, '').trim();
+
 function historyFor(nuid, clicktt_id) {
   result.scrollIntoView({behavior: 'smooth', block: 'start'});
   run(t('loading_history'), async () => {
@@ -1141,9 +1152,10 @@ function historyFor(nuid, clicktt_id) {
       const dHtml = `<span class="${d > 0 ? 'green' : d < 0 ? 'red' : 'dim'}">${d > 0 ? '+' : ''}${d}</span>`;
       const eName = String(ev.event_name || 'N/A');
       const shortE = eName.includes('|') ? eName.split('|').pop().trim() : eName;
+      const evCell = `<td class="dim">${esc(competitionName(eName))}</td>`;
       const matches = ev.match || [];
       if (!matches.length) {
-        return [`<tr><td>${date}</td><td class="num">${dHtml}</td><td class="num">${esc(ev.ttr_after ?? '')}</td><td class="ctr dim">-</td><td class="dim">${esc(shortE)}</td></tr>`];
+        return [`<tr><td class="date">${date}</td><td class="num">${dHtml}</td><td class="num">${esc(ev.ttr_after ?? '')}</td><td class="ctr dim">-</td><td class="dim">${esc(shortE)}</td><td class="dim">-</td>${evCell}</tr>`];
       }
       return matches.map(m => {
         const win = (m.own_sets || 0) > (m.other_sets || 0);
@@ -1151,11 +1163,11 @@ function historyFor(nuid, clicktt_id) {
         const score = `${m.own_sets || 0}:${m.other_sets || 0}`;
         const scoreCell = games.length
           ? `<span class="score" data-games="${games.join(',')}">${score}</span>` : score;
-        return `<tr><td>${date}</td><td class="num">${dHtml}</td><td class="num">${esc(ev.ttr_after ?? '')}</td>
+        return `<tr><td class="date">${date}</td><td class="num">${dHtml}</td><td class="num">${esc(ev.ttr_after ?? '')}</td>
           <td class="ctr ${win ? 'green' : 'red'}">${scoreCell}</td>
           <td>${nameLink(m.other_person_name || t('unknown'), m.other_person_id)} <span class="dim">(${esc(m.other_ttr ?? '?')})</span>${
             m.other_person_id ? `<span class="h2h" title="${t('btn_review')}" onclick="reviewFor('${esc(nuid)}','${esc(m.other_person_id)}')">⚔</span>` : ''
-          }</td></tr>`;
+          }</td><td>${esc(clubOfTeam(m.other_team_name) || '-')}</td>${evCell}</tr>`;
       });
     }).join('');
     // 生涯 TTR 序列（全部记录，非表格里的最近 15 场）
@@ -1180,7 +1192,7 @@ function historyFor(nuid, clicktt_id) {
     result.innerHTML = card(t('history_title', {name: esc(data.person_name || nuid), ttr: esc(data.ttr ?? 'N/A'), count: events.length})
       + `<span class="fav-title">${favBtn('player', nuid, data.person_name || nuid)}</span>`,
       statBar + (series.length > 1 ? `<div class="sparkwrap">${sparkline(series)}</div>` : '') +
-      `<table><tr><th>${t('th_date')}</th><th class="num">${t('th_delta')}</th><th class="num">${t('th_after')}</th><th class="ctr">${t('th_score')}</th><th>${t('th_opponent')}</th></tr>${rows}</table>`);
+      `<table><tr><th>${t('th_date')}</th><th class="num">${t('th_delta')}</th><th class="num">${t('th_after')}</th><th class="ctr">${t('th_score')}</th><th>${t('th_opponent')}</th><th>${t('th_opp_club')}</th><th>${t('th_event')}</th></tr>${rows}</table>`);
     wireSpark();
   });
 }
@@ -1205,25 +1217,68 @@ function doTeamPlayers() {
       `<table><tr><th class="num">${t('th_rank')}</th><th>${t('th_name')}</th><th>${t('th_internal_id')}</th><th class="ctr">★</th></tr>${teamRosterRows(data.players)}</table>`);
   });
 }
-// 球队标题旁的关注开关；没有队名时用 "Team {id}" 兜底
-const teamFav = (id, name) => `<span class="fav-title">${favBtn('team', id, name || 'Team ' + id)}</span>`;
+// 球队标题旁的关注开关；没有队名时用 "Team {id}" 兜底。
+// meta = {assoc, group, season}：球队所在的协会与小组，查本赛季比赛需要，随关注项一起保存
+const teamFav = (id, name, meta) => `<span class="fav-title">${favBtn('team', id, name || 'Team ' + id, meta)}</span>`;
+// 在 HTML 属性里传递 meta 对象
+const metaArg = meta => meta ? esc(JSON.stringify(meta)) : 'null';
 
 function doTeamAnalysis() {
   const id = $('teamId').value.trim(); if (!id) return;
   localStorage.setItem('mytt_team', id); HISTORY.add('team', id);
   teamAnalysisFor(id);
 }
-function teamAnalysisFor(id, name) {
+function teamAnalysisFor(id, name, meta) {
+  if (!meta || !meta.group) meta = FAVS.get(favId('team', String(id)))?.extra || null;  // 关注过的球队带有 meta
+  if (meta && !meta.group) meta = null;
   result.scrollIntoView({behavior: 'smooth', block: 'start'});
   run(t('analyzing_team'), async () => {
-    const data = await api(`/api/team/${encodeURIComponent(id)}/analysis`);
-    if (!data.players.length) return showError(t('no_roster'));
+    const [data, season] = await Promise.all([
+      api(`/api/team/${encodeURIComponent(id)}/analysis`),
+      meta ? api(`/api/team/${encodeURIComponent(id)}/matches`, {association: meta.assoc, group_id: meta.group, season: meta.season})
+               .catch(e => ({error: e.message}))
+           : null,
+    ]);
+    name = name || season?.team_name;
     const rows = data.players.map(p =>
       `<tr><td class="num">${esc(p.rank)}</td><td>${nameLink(p.name, p.nuid)}</td><td class="dim">${esc(p.nuid)}</td>
        <td class="num">${ttrHtml(p.ttr)}</td><td class="ctr">${favBtn('player', p.nuid, p.name)}</td></tr>`).join('');
-    result.innerHTML = card(t('analysis_title', {id: esc(id)}) + teamFav(id, name),
-      `<table><tr><th class="num">${t('th_rank')}</th><th>${t('th_name')}</th><th>NUID</th><th class="num">${t('th_live_ttr')}</th><th class="ctr">★</th></tr>${rows}</table>`);
+    const roster = data.players.length
+      ? `<table><tr><th class="num">${t('th_rank')}</th><th>${t('th_name')}</th><th>NUID</th><th class="num">${t('th_live_ttr')}</th><th class="ctr">★</th></tr>${rows}</table>`
+      : data.error ? `<span class="red">${esc(data.error)}</span>` : `<span class="dim">${t('no_roster')}</span>`;
+    const title = name ? `${esc(name)} <span class="dim">(${esc(id)})</span>` : t('analysis_title', {id: esc(id)});
+    result.innerHTML = teamMatchesCard(season, meta) + card(title + teamFav(id, name, meta), roster);
   });
+}
+
+// 本赛季比赛卡片；没有 meta（不知道所在小组）时给出提示
+function teamMatchesCard(r, meta) {
+  if (!r) return card(t('tm_title_plain'), `<span class="dim">${t('tm_no_meta')}</span>`);
+  if (r.error || !r.matches) return card(t('tm_title_plain'), `<span class="red">${esc(r.error || t('no_schedule'))}</span>`);
+  if (!r.matches.length) return card(t('tm_title_plain'), `<span class="dim">${t('no_schedule')}</span>`);
+  const s = r.summary;
+  const pad = n => String(n).padStart(2, '0');
+  const when = iso => { const d = new Date(iso); return isNaN(d) ? '-' :
+    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} <span class="dim">${pad(d.getHours())}:${pad(d.getMinutes())}</span>`; };
+  const rows = r.matches.map(m => {
+    const cls = {W: 'green', L: 'red', D: 'yellow'}[m.result] || 'dim';
+    const score = m.result
+      ? `<span class="pname ${cls}" title="${t('tm_details')}" onclick="meetingFor('${esc(m.meeting_id)}')">${m.own}:${m.opp}</span>`
+      : `<span class="dim">${m.state === 'scheduled' ? '-' : esc(m.state || '-')}</span>`;
+    return `<tr><td class="date">${when(m.date)}</td>
+      <td class="ctr dim">${t(m.home ? 'tm_home' : 'tm_away')}</td>
+      <td><span class="pname" onclick="teamAnalysisFor('${esc(m.opponent_id)}','${esc(m.opponent || '')}',${metaArg(meta)})">${esc(m.opponent || '-')}</span></td>
+      <td class="ctr">${score}</td>
+      <td class="dim venue" title="${esc(m.location || '')}">${esc(m.location || '')}</td></tr>`;
+  }).join('');
+  const bar = `<div class="sumbar">
+    <div><span class="k">${t('tm_played')}</span><span class="v">${s.played}</span></div>
+    <div><span class="k">${t('tm_wdl')}</span><span class="v"><span class="green">${s.won}</span> / <span class="yellow">${s.drawn}</span> / <span class="red">${s.lost}</span></span></div>
+    <div><span class="k">${t('tm_remaining')}</span><span class="v">${s.remaining}</span></div>
+  </div>`;
+  const season = String(r.season || '').replace('--', '/');
+  return card(t('tm_title', {league: esc(r.league || ''), season: esc(season)}),
+    bar + `<table><tr><th>${t('th_date')}</th><th class="ctr">${t('tm_ha')}</th><th>${t('th_opp_name')}</th><th class="ctr">${t('th_score')}</th><th>${t('tm_venue')}</th></tr>${rows}</table>`);
 }
 function doTeamSchedule() {
   const id = $('teamId').value.trim(); if (!id) return;
@@ -1271,10 +1326,15 @@ async function renderClubTeams(clubNumber, organization, clubName) {
   const data = await api('/api/club/teams', {club_number: clubNumber, organization});
   const teams = data.data || [];
   if (!teams.length) return showError(t('no_club_teams'));
-  const rows = teams.map(x => `<tr class="click" onclick="teamAnalysisFor('${esc(x.team_id ?? '')}','${esc(x.team_name || '')}')">
+  const rows = teams.map(x => {
+    const meta = x.group_id ? {assoc: x.team_organisation_short || organization, group: String(x.group_id),
+                               season: x.season ? String(x.season).replace('/', '--') : undefined} : null;
+    const fullName = clubName && x.team_name ? `${clubName} · ${x.team_name}` : (x.team_name || '');
+    return `<tr class="click" onclick="teamAnalysisFor('${esc(x.team_id ?? '')}','${esc(fullName)}',${metaArg(meta)})">
     <td>${esc(x.team_name || '-')}</td><td class="dim">${esc(x.league_name || '-')}</td>
     <td class="num">${esc(x.team_id ?? '-')}</td><td class="num dim">${esc(x.group_id ?? '-')}</td>
-    <td class="ctr">${favBtn('team', x.team_id ?? '', x.team_name || '')}</td></tr>`).join('');
+    <td class="ctr">${favBtn('team', x.team_id ?? '', fullName, meta)}</td></tr>`;
+  }).join('');
   const clubFav = favBtn('club', `${clubNumber}:${organization}`, clubName || `Club ${clubNumber}`, {org: organization});
   result.innerHTML = card(t('club_teams_title', {club: esc(clubNumber), org: esc(organization)}) + `<span class="fav-title">${clubFav}</span>`,
     `<table><tr><th>${t('th_team_name')}</th><th>${t('th_league_name')}</th><th class="num">Team ID</th><th class="num">Group ID</th><th class="ctr">★</th></tr>${rows}</table>`);
@@ -1309,21 +1369,41 @@ function doLeagueTable() {
 function doMeetingLive() {
   const id = $('meetingId').value.trim(); if (!id) return;
   HISTORY.add('meeting', id);
+  meetingFor(id);
+}
+function meetingFor(id) {
+  result.scrollIntoView({behavior: 'smooth', block: 'start'});
   run(t('loading_live'), async () => {
     const data = await api(`/api/meeting/${encodeURIComponent(id)}/live`);
     const live = data.data || {};
-    const score = `${live.matches_won_home ?? 0} : ${live.matches_won_away ?? 0}`;
-    const matches = live.matches || [];
+    // mm_player11/12 = 主队（双打两人），mm_player21/22 = 客队；单打只有 11 和 21
+    const pl = p => p && p.lastname ? nameLink(`${p.lastname}, ${p.firstname || ''}`.trim(), p.person_id) : '';
+    const side = (a, b) => [pl(a), pl(b)].filter(Boolean).join(' / ') || '<span class="dim">-</span>';
+    const matches = live.match || [];
     const rows = matches.map(m => {
-      const p1 = `${m.player_home_name_1 || ''} ${m.player_home_name_2 || ''}`.trim();
-      const p2 = `${m.player_away_name_1 || ''} ${m.player_away_name_2 || ''}`.trim();
-      return `<tr><td class="num">${esc(m.match_order ?? '-')}</td><td>${esc(p1)} <span class="dim">${t('vs')}</span> ${esc(p2)}</td>
-        <td class="dim">${esc(m.state || '-')}</td><td class="ctr">${esc(m.sets_won_home ?? 0)}:${esc(m.sets_won_away ?? 0)}</td></tr>`;
+      const hs = m.sets_home ?? 0, gs = m.sets_guest ?? 0;
+      const played = hs || gs || m.home_wo || m.guest_wo;
+      const games = [];
+      for (let i = 1; i <= 7; i++) {
+        const a = m['set' + i + '_home'] || 0, b = m['set' + i + '_guest'] || 0;
+        if (a || b) games.push(a + ':' + b);
+      }
+      const cls = !played ? 'dim' : hs > gs ? 'green' : 'red';   // 以主队视角着色
+      return `<tr${played ? '' : ' class="dim"'}><td class="dim">${esc(m.match_name || '-')}</td>
+        <td>${side(m.mm_player11, m.mm_player12)}</td>
+        <td class="ctr ${cls}">${played ? `<span class="score" data-games="${games.join(',')}">${hs}:${gs}</span>` : '-'}</td>
+        <td>${side(m.mm_player21, m.mm_player22)}</td>
+        <td class="dim">${esc(games.join(' '))}</td></tr>`;
     }).join('');
-    result.innerHTML = card(`🔴 ${esc(live.team_home || 'Home')} <span class="yellow">${score}</span> ${esc(live.team_away || 'Away')}`,
-      matches.length
-        ? `<table><tr><th class="num">${t('th_match_no')}</th><th>${t('th_matchup')}</th><th>${t('th_state')}</th><th class="ctr">${t('th_score')}</th></tr>${rows}</table>`
-        : `<span class="dim">${t('no_live_detail')}</span>`);
+    const score = `${live.matches_home ?? 0} : ${live.matches_guest ?? 0}`;
+    const when = (live.scheduled || '').slice(0, 10);
+    const title = `${live.live ? '🔴 ' : ''}${esc(live.team_home || 'Home')} <span class="yellow">${score}</span> ${esc(live.team_guest || 'Away')}`
+      + (when ? ` <span class="dim">${esc(when)}</span>` : '');
+    result.innerHTML = card(title,
+      (live.group_name ? `<div class="dim" style="margin-bottom:8px">${esc(live.group_name)}</div>` : '') +
+      (matches.length
+        ? `<table><tr><th>${t('th_match_no')}</th><th>${esc(live.team_home || '')}</th><th class="ctr">${t('th_score')}</th><th>${esc(live.team_guest || '')}</th><th>${t('th_game_scores')}</th></tr>${rows}</table>`
+        : `<span class="dim">${t('no_live_detail')}</span>`));
   });
 }
 

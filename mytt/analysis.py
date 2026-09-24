@@ -49,6 +49,70 @@ def collect_team_analysis(api: MyTTApi, team_id: str, with_form: bool = False) -
     return players
 
 
+def current_season(now: Optional[datetime] = None) -> str:
+    """当前赛季的 URL 形式，如 "26--27"。赛季 7 月开始。"""
+    now = now or datetime.now()
+    start = now.year if now.month >= 7 else now.year - 1
+    return f"{start % 100:02d}--{(start + 1) % 100:02d}"
+
+
+def team_season_matches(api: MyTTApi, association: str, group_id: str, team_id: str,
+                        season: Optional[str] = None) -> Dict[str, Any]:
+    """球队本赛季的全部比赛与结果。
+
+    球队级的 spielplan 接口会 403，这里取所在小组（联赛）的完整赛程再按 team_id 过滤。
+    小组赛程中 matches_won / matches_lost 是主队 / 客队的得分，需按主客场换算成本队视角。
+    """
+    season = season or current_season()
+    data = api.get_group_schedule_loader(association, season, "x", group_id)  # 联赛 slug 不影响结果
+    if not isinstance(data, dict) or not isinstance(data.get("data"), dict):
+        return {"error": (data or {}).get("error") or "无法获取联赛赛程", "matches": []}
+
+    tid = str(team_id)
+    matches: List[Dict[str, Any]] = []
+    team_name = ""
+    for day in data["data"].get("meetings") or []:
+        for m in (x for ms in day.values() for x in ms):
+            home = str(m.get("team_home_id")) == tid
+            if not home and str(m.get("team_away_id")) != tid:
+                continue
+            team_name = m.get("team_home" if home else "team_away") or team_name
+            done = m.get("state") == "done"
+            hs, as_ = int(m.get("matches_won") or 0), int(m.get("matches_lost") or 0)
+            own, opp = (hs, as_) if home else (as_, hs)
+            matches.append({
+                "date": m.get("date"),
+                "meeting_id": m.get("meeting_id"),
+                "home": home,
+                "opponent": m.get("team_away" if home else "team_home"),
+                "opponent_id": m.get("team_away_id" if home else "team_home_id"),
+                "state": m.get("state"),
+                "own": own if done else None,
+                "opp": opp if done else None,
+                "result": ("W" if own > opp else "L" if own < opp else "D") if done else None,
+                "location": (m.get("location") or {}).get("label"),
+            })
+    matches.sort(key=lambda x: x["date"] or "")
+
+    played = [x for x in matches if x["result"]]
+    head = data["data"].get("head_infos") or {}
+    return {
+        "season": season,
+        "association": association,
+        "group_id": group_id,
+        "team_name": team_name,
+        "league": head.get("league_name"),
+        "matches": matches,
+        "summary": {
+            "played": len(played),
+            "won": sum(x["result"] == "W" for x in played),
+            "drawn": sum(x["result"] == "D" for x in played),
+            "lost": sum(x["result"] == "L" for x in played),
+            "remaining": len(matches) - len(played),
+        },
+    }
+
+
 def collect_war_room(api: MyTTApi, my_team_id: str) -> Dict[str, Any]:
     """作战室数据：锁定下一场对手并收集其阵容与近况。
     出错时返回 {'error': 提示文本}。"""

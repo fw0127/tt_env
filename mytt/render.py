@@ -1,4 +1,5 @@
 """各功能的终端渲染视图：搜索、TTR、阵容、赛程、排名、Live。"""
+import re
 from typing import Any
 
 from rich import box
@@ -8,6 +9,17 @@ from rich.table import Table
 
 from .api import MyTTApi, clean_roster
 from .ui import console, format_ttr, show_json
+
+
+def competition_name(event_name: str) -> str:
+    """赛事名：联赛为 "KLC E-Erwachsene | 主队 : 客队"，取 | 前的联赛名；锦标赛原样。"""
+    return event_name.split("|")[0].strip() if "|" in event_name else event_name
+
+
+def club_of_team(team_name: str | None) -> str:
+    """队名去掉末尾的罗马数字队伍编号（"TV Zuffenhausen IV" → "TV Zuffenhausen"）。
+    阿拉伯数字不去，可能是建队年份（如 "TV Stuttgart 1846"）。"""
+    return re.sub(r"\s+[IVX]+$", "", team_name or "").strip()
 
 
 def render_ttr_history(api: MyTTApi, nuid: str, clicktt_id: str | None = None) -> None:
@@ -35,13 +47,15 @@ def render_ttr_history(api: MyTTApi, nuid: str, clicktt_id: str | None = None) -
     table.add_column("赛后", width=8, justify="right")
     table.add_column("比分", width=8, justify="center")
     table.add_column("对手 (TTR)", width=25, justify="left")
+    table.add_column("对手俱乐部", width=22, justify="left")
     table.add_column("赛事", width=30, justify="left")
 
     for ev in recent_events:
         date = (ev.get("event_date_time", "N/A") or "N/A")[:10]
         delta = ev.get("ttr_delta", 0)
         after = ev.get("ttr_after", "N/A")
-        e_name = ev.get("event_name", "N/A")
+        e_name = str(ev.get("event_name") or "N/A")
+        comp = competition_name(e_name)
 
         delta_text = f"+{delta}" if delta > 0 else str(delta)
         delta_style = "green" if delta > 0 else ("red" if delta < 0 else "white")
@@ -56,24 +70,25 @@ def render_ttr_history(api: MyTTApi, nuid: str, clicktt_id: str | None = None) -
                 score_raw = f"{own_s}:{oth_s}"
                 score_style = "green" if own_s > oth_s else "red"
                 opp_info = f"{opp_name}({opp_ttr})"
-                short_e = e_name.split("|")[-1].strip() if "|" in str(e_name) else e_name
                 table.add_row(
                     date,
                     f"[{delta_style}]{delta_text}[/{delta_style}]",
                     str(after),
                     f"[{score_style}]{score_raw}[/{score_style}]",
                     opp_info[:25],
-                    short_e[:30],
+                    (club_of_team(m.get("other_team_name")) or "-")[:22],
+                    comp[:30],
                 )
         else:
-            vs_info = e_name.split("|")[-1].strip() if "|" in str(e_name) else "汇总"
+            vs_info = e_name.split("|")[-1].strip() if "|" in e_name else "汇总"
             table.add_row(
                 date,
                 f"[{delta_style}]{delta_text}[/{delta_style}]",
                 str(after),
                 "-",
                 vs_info[:25],
-                str(e_name)[:30],
+                "-",
+                comp[:30],
             )
 
     console.print(table)
