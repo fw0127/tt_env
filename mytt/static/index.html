@@ -174,6 +174,7 @@
     <button data-tab="war" data-i18n="nav_war">⚔️ 作战室</button>
     <button data-tab="review" data-i18n="nav_review">📝 复盘</button>
     <button data-tab="fav" data-i18n="nav_fav">⭐ 关注</button>
+    <button data-tab="calc" data-i18n="nav_calc">🧮 计算</button>
     <button data-tab="more" data-i18n="nav_more">🏆 更多</button>
   </nav>
 
@@ -243,6 +244,30 @@
         <button class="btn alt" onclick="doFavorites(true)" data-i18n="btn_fav_refresh">🔄 刷新（跳过缓存）</button>
       </div>
       <p class="hint" data-i18n="hint_fav">在搜索结果、球员历史、球队与俱乐部页面点击 ☆ 即可加入关注。面板会汇总关注球员的实时 TTR 与近况、关注球队的下一场比赛、关注俱乐部的球队数量。</p>
+    </div>
+  </section>
+
+  <section id="tab-calc">
+    <div class="card">
+      <div class="row">
+        <input id="calcNuid" data-history="calcNuid" autocomplete="off" data-i18n-ph="calc_ph_nuid" placeholder="球员 NUID（可选，自动填入 TTR 与系数）" onkeydown="if(event.key==='Enter')calcLoadMe()">
+        <button class="btn alt" onclick="calcLoadMe()" data-i18n="calc_btn_me">取我的 TTR</button>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <input id="calcTtr" type="number" inputmode="numeric" data-i18n-ph="calc_ph_ttr" placeholder="我的 TTR" style="flex:0 0 140px">
+        <select id="calcK" style="flex:0 0 190px" title="Änderungskonstante">
+          <option value="16">K = 16</option><option value="20">K = 20</option><option value="24">K = 24</option>
+          <option value="28">K = 28</option><option value="32">K = 32</option>
+        </select>
+        <input id="calcTeam" data-history="calcTeam" autocomplete="off" data-i18n-ph="calc_ph_team" placeholder="对手 Team ID（可选，载入整队 TTR）" onkeydown="if(event.key==='Enter')calcLoadTeam()">
+        <button class="btn alt" onclick="calcLoadTeam()" data-i18n="calc_btn_team">载入对手</button>
+      </div>
+      <div id="calcRows" style="margin-top:10px"></div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn alt" onclick="calcAddRow()" data-i18n="calc_add">+ 添加对手</button>
+        <button class="btn" onclick="calcRun()" data-i18n="calc_run">计算</button>
+      </div>
+      <p class="hint" data-i18n="calc_hint">预期胜率 = 1/(1+10^((对手TTR−我的TTR)/150))；变动 = K ×（实际胜场 − 预期胜场合计），同一天的多场一起算、最后才四舍五入。K 默认 16，青少年与新手更高，可在上面选择或由 NUID 自动带入。</p>
     </div>
   </section>
 
@@ -320,6 +345,15 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 const I18N = {
   zh: {
     app_title: 'MyTT 助手', app_sub: 'Web 版',
+    nav_calc: '🧮 计算',
+    calc_ph_nuid: '球员 NUID（可选，自动填入 TTR 与系数）', calc_btn_me: '取我的 TTR', calc_ph_ttr: '我的 TTR',
+    calc_ph_team: '对手 Team ID（可选，载入整队 TTR）', calc_btn_team: '载入对手', calc_add: '+ 添加对手', calc_run: '计算',
+    calc_ph_name: '对手姓名（可选）', calc_ph_opp: '对手 TTR', calc_win: '胜', calc_loss: '负', calc_skip: '未打',
+    calc_hint: '预期胜率 = 1/(1+10^((对手TTR−我的TTR)/150))；变动 = K ×（实际胜场 − 预期胜场合计），同一天的多场一起算、最后才四舍五入。K 默认 16，青少年与新手更高，可在上面选择或由 NUID 自动带入。',
+    calc_title: '🧮 TTR 计算（我的 TTR {ttr}）', calc_diff: '分差', calc_expect: '预期胜率', calc_result: '结果',
+    calc_if_win: '改判胜', calc_if_loss: '改判负', calc_sum_expect: '预期胜场', calc_sum_wins: '实际胜场',
+    calc_delta: 'TTR 变动', calc_new_ttr: '新 TTR', calc_need_ttr: '请先填写我的 TTR。', calc_need_opp: '请至少添加一位对手。',
+    calc_no_ttr: '未取到该球员的 TTR。', calc_loading_me: '正在获取我的 TTR...', calc_loading_team: '正在载入对手阵容...',
     nav_search: '🔍 搜索', nav_player: '👤 球员', nav_team: '📋 球队', nav_war: '⚔️ 作战室', nav_review: '📝 复盘', nav_fav: '⭐ 关注', nav_more: '🏆 更多',
     btn_fav_open: '⭐ 打开关注面板', btn_fav_refresh: '🔄 刷新（跳过缓存）',
     hint_fav: '在搜索结果、球员历史、球队与俱乐部页面点击 ☆ 即可加入关注。面板会汇总关注球员的实时 TTR 与近况、关注球队的下一场比赛、关注俱乐部的球队数量。',
@@ -395,7 +429,7 @@ const I18N = {
     war_locked: '🎯 下场对手锁定:', war_date: '📅 比赛日期:', war_report: '⚔️ 对手战力侦察报告',
     th_rank_short: '排', th_player_name: '选手姓名', th_recent: '近期状态', th_trend: '5场趋势',
     form_hot: '🔥 极佳', form_cold: '📉 低迷', form_flat: '平稳', form_trend: '(胜{wins}/5)',
-    loading_club_teams: '正在查询俱乐部球队...', no_club_teams: '未获取到俱乐部球队。',
+    loading_club_teams: '正在查询俱乐部球队...', no_club_teams: '未获取到俱乐部球队。', club_switched: '编号 {from} 下没有球队（站点上的同名旧编号），已自动改用 {to}。',
     club_teams_title: '🏢 俱乐部球队 (Club: {club}, {org})',
     th_team_name: '球队名称', th_league_name: '联赛名称',
     loading_league: '正在获取联赛排名...', no_league: '未获取到排名表。',
@@ -406,6 +440,15 @@ const I18N = {
   },
   de: {
     app_title: 'MyTT Assistent', app_sub: 'Web',
+    nav_calc: '🧮 Rechner',
+    calc_ph_nuid: 'Spieler-NUID (optional, füllt TTR und Konstante)', calc_btn_me: 'Eigene TTR holen', calc_ph_ttr: 'Eigene TTR',
+    calc_ph_team: 'Gegner Team-ID (optional, ganze Mannschaft laden)', calc_btn_team: 'Gegner laden', calc_add: '+ Gegner', calc_run: 'Berechnen',
+    calc_ph_name: 'Name des Gegners (optional)', calc_ph_opp: 'TTR des Gegners', calc_win: 'Sieg', calc_loss: 'Nied.', calc_skip: 'n. gesp.',
+    calc_hint: 'Erwartungswert = 1/(1+10^((TTR Gegner−eigene TTR)/150)); Änderung = K × (Siege − Summe der Erwartungswerte). Alle Spiele eines Spieltags zählen zusammen, gerundet wird erst am Ende. K ist standardmäßig 16, bei Jugendlichen und Neulingen höher – oben wählbar oder per NUID automatisch.',
+    calc_title: '🧮 TTR-Rechner (eigene TTR {ttr})', calc_diff: 'Diff.', calc_expect: 'Erwartung', calc_result: 'Ergebnis',
+    calc_if_win: 'bei Sieg', calc_if_loss: 'bei Nied.', calc_sum_expect: 'Erwartete Siege', calc_sum_wins: 'Siege',
+    calc_delta: 'TTR-Änderung', calc_new_ttr: 'Neue TTR', calc_need_ttr: 'Bitte zuerst die eigene TTR eintragen.', calc_need_opp: 'Bitte mindestens einen Gegner hinzufügen.',
+    calc_no_ttr: 'Keine TTR für diesen Spieler erhalten.', calc_loading_me: 'Eigene TTR wird geholt...', calc_loading_team: 'Mannschaft wird geladen...',
     nav_search: '🔍 Suche', nav_player: '👤 Spieler', nav_team: '📋 Team', nav_war: '⚔️ Gegneranalyse', nav_review: '📝 Nachbereitung', nav_fav: '⭐ Merkliste', nav_more: '🏆 Mehr',
     btn_fav_open: '⭐ Merkliste öffnen', btn_fav_refresh: '🔄 Aktualisieren (ohne Cache)',
     hint_fav: 'Mit dem ☆ in Suchergebnissen, Spielerverlauf, Team- und Vereinsansichten etwas merken. Die Übersicht zeigt Live-TTR und Form der gemerkten Spieler, das nächste Spiel gemerkter Teams und die Teamanzahl gemerkter Vereine.',
@@ -481,7 +524,7 @@ const I18N = {
     war_locked: '🎯 Nächster Gegner:', war_date: '📅 Spieltag:', war_report: '⚔️ Gegner-Stärkeanalyse',
     th_rank_short: 'Rg', th_player_name: 'Spielername', th_recent: 'Aktuelle Form', th_trend: 'Trend 5 Sp.',
     form_hot: '🔥 Top', form_cold: '📉 Schwach', form_flat: 'Stabil', form_trend: '(S{wins}/5)',
-    loading_club_teams: 'Vereinsteams werden abgefragt...', no_club_teams: 'Keine Vereinsteams erhalten.',
+    loading_club_teams: 'Vereinsteams werden abgefragt...', no_club_teams: 'Keine Vereinsteams erhalten.', club_switched: 'Unter Vereinsnr. {from} gibt es keine Mannschaften (gleichnamiger Alteintrag), stattdessen wird {to} verwendet.',
     club_teams_title: '🏢 Vereinsteams (Verein: {club}, {org})',
     th_team_name: 'Teamname', th_league_name: 'Liga',
     loading_league: 'Ligatabelle wird geladen...', no_league: 'Keine Tabelle erhalten.',
@@ -492,6 +535,15 @@ const I18N = {
   },
   en: {
     app_title: 'MyTT Assistant', app_sub: 'Web',
+    nav_calc: '🧮 Calculator',
+    calc_ph_nuid: 'Player NUID (optional, fills TTR and constant)', calc_btn_me: 'Get my TTR', calc_ph_ttr: 'My TTR',
+    calc_ph_team: 'Opponent team ID (optional, load whole team)', calc_btn_team: 'Load opponents', calc_add: '+ Opponent', calc_run: 'Calculate',
+    calc_ph_name: "Opponent's name (optional)", calc_ph_opp: "Opponent's TTR", calc_win: 'Win', calc_loss: 'Loss', calc_skip: 'Not played',
+    calc_hint: 'Expectancy = 1/(1+10^((opponent TTR−my TTR)/150)); change = K × (wins − sum of expectancies). All matches of one day count together and are rounded only at the end. K defaults to 16 and is higher for juniors and newcomers — pick it above or let a NUID fill it in.',
+    calc_title: '🧮 TTR calculator (my TTR {ttr})', calc_diff: 'Diff.', calc_expect: 'Expectancy', calc_result: 'Result',
+    calc_if_win: 'if win', calc_if_loss: 'if loss', calc_sum_expect: 'Expected wins', calc_sum_wins: 'Actual wins',
+    calc_delta: 'TTR change', calc_new_ttr: 'New TTR', calc_need_ttr: 'Please enter your TTR first.', calc_need_opp: 'Please add at least one opponent.',
+    calc_no_ttr: 'No TTR returned for this player.', calc_loading_me: 'Fetching my TTR...', calc_loading_team: 'Loading opponents...',
     nav_search: '🔍 Search', nav_player: '👤 Player', nav_team: '📋 Team', nav_war: '⚔️ War Room', nav_review: '📝 Review', nav_fav: '⭐ Watchlist', nav_more: '🏆 More',
     btn_fav_open: '⭐ Open watchlist', btn_fav_refresh: '🔄 Refresh (skip cache)',
     hint_fav: 'Click the ☆ in search results, player history, team and club views to follow. The panel shows live TTR and form for followed players, the next fixture for followed teams, and the team count for followed clubs.',
@@ -567,7 +619,7 @@ const I18N = {
     war_locked: '🎯 Next opponent:', war_date: '📅 Match date:', war_report: '⚔️ Opponent Scouting Report',
     th_rank_short: '#', th_player_name: 'Player Name', th_recent: 'Recent Form', th_trend: 'Trend (5)',
     form_hot: '🔥 Hot', form_cold: '📉 Cold', form_flat: 'Steady', form_trend: '(W{wins}/5)',
-    loading_club_teams: 'Querying club teams...', no_club_teams: 'No club teams returned.',
+    loading_club_teams: 'Querying club teams...', no_club_teams: 'No club teams returned.', club_switched: 'Club no. {from} has no teams (a same-named old entry), using {to} instead.',
     club_teams_title: '🏢 Club Teams (Club: {club}, {org})',
     th_team_name: 'Team Name', th_league_name: 'League',
     loading_league: 'Fetching league table...', no_league: 'No table returned.',
@@ -722,6 +774,12 @@ async function api(path, params) {
 
 function loading(text) {
   result.innerHTML = `<div class="card"><div class="loading"><div class="spinner"></div>${esc(text)}</div></div>`;
+}
+// 接口返回的 error：字符串直接用，对象取 message/code
+function errText(err) {
+  if (!err) return '';
+  if (typeof err === 'string') return err;
+  return [err.message, err.code].filter(Boolean).join(' · ');
 }
 function showError(msg) {
   result.innerHTML = `<div class="card"><span class="red">❌ ${esc(msg)}</span></div>`;
@@ -878,7 +936,7 @@ function doFavorites(refresh) {
     }
 
     if (d.clubs.length) {
-      const rows = d.clubs.map(c => `<tr class="fav-row click" onclick="doClubTeamsWith('${esc(c.clubnr)}','${esc(c.org)}')">
+      const rows = d.clubs.map(c => `<tr class="fav-row click" onclick="doClubTeamsWith('${esc(c.clubnr)}','${esc(c.org)}','${esc(c.name || '')}')">
         <td>${esc(c.name)}</td><td class="dim">${esc(c.clubnr)}</td><td>${esc(c.org || '-')}</td>
         <td class="num">${c.teams == null ? '<span class="dim">-</span>' : c.teams}</td>
         <td class="ctr">${favBtn('club', c.key, c.name, c.extra)}</td></tr>`).join('');
@@ -1110,7 +1168,7 @@ async function clubTeamsByName(name) {
     const data = await api('/api/search/clubs', {q: name});
     const c = (data.results || [])[0];
     if (!c || !c.clubnr || !c.organization_short) return showError(t('club_incomplete', {name}));
-    await renderClubTeams(c.clubnr, c.organization_short);
+    await renderClubTeams(c.clubnr, c.organization_short, c.clubname || name);
   });
 }
 
@@ -1245,7 +1303,7 @@ function teamAnalysisFor(id, name, meta) {
        <td class="num">${ttrHtml(p.ttr)}</td><td class="ctr">${favBtn('player', p.nuid, p.name)}</td></tr>`).join('');
     const roster = data.players.length
       ? `<table><tr><th class="num">${t('th_rank')}</th><th>${t('th_name')}</th><th>NUID</th><th class="num">${t('th_live_ttr')}</th><th class="ctr">★</th></tr>${rows}</table>`
-      : data.error ? `<span class="red">${esc(data.error)}</span>` : `<span class="dim">${t('no_roster')}</span>`;
+      : data.error ? `<span class="red">${esc(errText(data.error))}</span>` : `<span class="dim">${t('no_roster')}</span>`;
     const title = name ? `${esc(name)} <span class="dim">(${esc(id)})</span>` : t('analysis_title', {id: esc(id)});
     result.innerHTML = teamMatchesCard(season, meta) + card(title + teamFav(id, name, meta), roster);
   });
@@ -1254,7 +1312,7 @@ function teamAnalysisFor(id, name, meta) {
 // 本赛季比赛卡片；没有 meta（不知道所在小组）时给出提示
 function teamMatchesCard(r, meta) {
   if (!r) return card(t('tm_title_plain'), `<span class="dim">${t('tm_no_meta')}</span>`);
-  if (r.error || !r.matches) return card(t('tm_title_plain'), `<span class="red">${esc(r.error || t('no_schedule'))}</span>`);
+  if (r.error || !r.matches) return card(t('tm_title_plain'), `<span class="red">${esc(errText(r.error) || t('no_schedule'))}</span>`);
   if (!r.matches.length) return card(t('tm_title_plain'), `<span class="dim">${t('no_schedule')}</span>`);
   const s = r.summary;
   const pad = n => String(n).padStart(2, '0');
@@ -1321,11 +1379,143 @@ function doWarRoom() {
   });
 }
 
+// ---------- TTR 计算器 ----------
+// 德国 TTR 公式（已用本地缓存的历史数据逐场核对：预期值与变动值完全一致）
+const TTR = {
+  // 预期胜率：分差 150 约等于 1:5.6
+  expect: (own, opp) => 1 / (1 + Math.pow(10, (opp - own) / 150)),
+  // 同一个"事件"（一个比赛日）的所有单打一起算，最后四舍五入一次
+  delta: (own, rows, k) => Math.round(k * rows.reduce((sum, r) => sum + (r.win ? 1 : 0) - TTR.expect(own, r.ttr), 0)),
+};
+
+function calcAddRow(ttr = '', name = '', res = 'w') {
+  const div = document.createElement('div');
+  div.className = 'row calc-row';
+  div.style.marginTop = '6px';
+  div.innerHTML = `
+    <input class="c-name" value="${esc(name)}" data-i18n-ph="calc_ph_name" placeholder="${t('calc_ph_name')}" style="flex:1 1 160px">
+    <input class="c-ttr" type="number" inputmode="numeric" value="${esc(ttr)}" data-i18n-ph="calc_ph_opp" placeholder="${t('calc_ph_opp')}" style="flex:0 0 120px">
+    <select class="c-res" style="flex:0 0 110px">
+      <option value="w">${t('calc_win')}</option><option value="l">${t('calc_loss')}</option><option value="-">${t('calc_skip')}</option>
+    </select>
+    <button class="btn alt" style="flex:0 0 auto" onclick="this.parentNode.remove();calcRun(true)">✕</button>`;
+  div.querySelector('.c-res').value = res;
+  $('calcRows').appendChild(div);
+  return div;
+}
+
+// 读取界面上的对手列表；skipped 表示"未打"，不参与计算
+function calcCollect() {
+  return [...document.querySelectorAll('#calcRows .calc-row')].map(d => ({
+    name: d.querySelector('.c-name').value.trim(),
+    ttr: Number(d.querySelector('.c-ttr').value),
+    win: d.querySelector('.c-res').value === 'w',
+    skip: d.querySelector('.c-res').value === '-',
+  })).filter(r => r.ttr > 0);
+}
+
+async function calcLoadMe() {
+  const nuid = $('calcNuid').value.trim(); if (!nuid) return;
+  HISTORY.add('calcNuid', nuid);
+  run(t('calc_loading_me'), async () => {
+    const [live, hist] = await Promise.all([
+      api(`/api/player/${encodeURIComponent(nuid)}/ttr`),
+      api(`/api/player/${encodeURIComponent(nuid)}/history`).catch(() => ({})),
+    ]);
+    const ttr = live.ttr ?? hist.ttr;
+    if (!ttr) return showError(errText(live.error) || t('calc_no_ttr'));
+    $('calcTtr').value = ttr;
+    // 变动系数随年龄/比赛场次变化，取最近一场真实比赛用过的值（修正事件的 0 不算）
+    const k = [...(hist.event || [])].reverse().find(e => e.alteration_constant > 0)?.alteration_constant;
+    if (k && [...$('calcK').options].some(o => Number(o.value) === k)) $('calcK').value = String(k);
+    calcRun();
+  });
+}
+
+function calcLoadTeam() {
+  const id = $('calcTeam').value.trim(); if (!id) return;
+  HISTORY.add('calcTeam', id);
+  run(t('calc_loading_team'), async () => {
+    const data = await api(`/api/team/${encodeURIComponent(id)}/analysis`);
+    const players = (data.players || []).filter(p => p.ttr);
+    if (!players.length) return showError(errText(data.error) || t('no_roster'));
+    $('calcRows').innerHTML = '';
+    players.forEach(p => calcAddRow(p.ttr, p.name, '-'));  // 默认未打：先看逐人的潜在得失，再按实际结果勾选
+    calcRun();
+  });
+}
+
+function calcRun(quiet) {
+  const own = Number($('calcTtr').value);
+  const k = Number($('calcK').value);
+  if (!own) return quiet ? undefined : showError(t('calc_need_ttr'));
+  const all = calcCollect();
+  const rows = all.filter(r => !r.skip);
+  if (!all.length) return quiet ? undefined : showError(t('calc_need_opp'));
+
+  const expSum = rows.reduce((s, r) => s + TTR.expect(own, r.ttr), 0);
+  const wins = rows.filter(r => r.win).length;
+  const delta = TTR.delta(own, rows, k);
+  const dCls = delta > 0 ? 'green' : delta < 0 ? 'red' : 'dim';
+
+  const trs = all.map(r => {
+    const p = TTR.expect(own, r.ttr);
+    // 把这一场改成胜 / 负后的总变动，其余结果保持不变
+    const flip = win => TTR.delta(own, rows.map(x => x === r ? {...x, win} : x).concat(r.skip ? [{...r, win}] : []), k);
+    const d = r.ttr - own;
+    return `<tr${r.skip ? ' class="dim"' : ''}><td>${esc(r.name || '-')}</td>
+      <td class="num">${r.ttr}</td>
+      <td class="num dim">${d > 0 ? '+' : ''}${d}</td>
+      <td class="num">${p < 0.001 ? '&lt;0.1' : (p * 100).toFixed(1)}%</td>
+      <td class="ctr ${r.skip ? 'dim' : r.win ? 'green' : 'red'}">${t(r.skip ? 'calc_skip' : r.win ? 'calc_win' : 'calc_loss')}</td>
+      <td class="num green">${fmtDelta(flip(true))}</td>
+      <td class="num red">${fmtDelta(flip(false))}</td></tr>`;
+  }).join('');
+
+  const bar = `<div class="sumbar">
+    <div><span class="k">${t('calc_sum_expect')}</span><span class="v">${expSum.toFixed(2)}</span>
+      <span class="dim">/ ${rows.length}</span></div>
+    <div><span class="k">${t('calc_sum_wins')}</span><span class="v">${wins}</span></div>
+    <div><span class="k">${t('calc_delta')}</span><span class="v ${dCls}">${fmtDelta(delta)}</span>
+      <span class="dim">K=${k}</span></div>
+    <div><span class="k">${t('calc_new_ttr')}</span><span class="v">${own + delta}</span></div>
+  </div>`;
+  result.innerHTML = card(t('calc_title', {ttr: own}), bar +
+    `<table><tr><th>${t('th_name')}</th><th class="num">${t('th_opp_ttr')}</th><th class="num">${t('calc_diff')}</th>
+      <th class="num">${t('calc_expect')}</th><th class="ctr">${t('calc_result')}</th>
+      <th class="num">${t('calc_if_win')}</th><th class="num">${t('calc_if_loss')}</th></tr>${trs}</table>`);
+}
+const fmtDelta = d => (d > 0 ? '+' : '') + d;
+
+// 改动输入即时重算（已经算过一次之后才生效，避免打字时弹错误）
+$('tab-calc').addEventListener('input', e => { if (e.target.id !== 'calcNuid' && e.target.id !== 'calcTeam') calcRun(true); });
+$('tab-calc').addEventListener('change', () => calcRun(true));
+
 // ---------- 更多 ----------
 async function renderClubTeams(clubNumber, organization, clubName) {
   const data = await api('/api/club/teams', {club_number: clubNumber, organization});
-  const teams = data.data || [];
-  if (!teams.length) return showError(t('no_club_teams'));
+  let teams = data.data || [];
+  let note = '';
+
+  // 同一家俱乐部在站点上可能有多个编号（旧编号等），球队只挂在其中一个下面。
+  // 空结果时用名字找同名俱乐部，自动改用真正有球队的那个编号。
+  if (!teams.length && clubName) {
+    const found = await api('/api/search/clubs', {q: clubName}).catch(() => ({}));
+    for (const c of (found.results || [])) {
+      if (String(c.clubnr) === String(clubNumber)) continue;
+      if ((c.clubname || '').trim().toLowerCase() !== clubName.trim().toLowerCase()) continue;
+      const alt = await api('/api/club/teams', {club_number: c.clubnr, organization: c.organization_short || organization})
+        .catch(() => ({}));
+      if ((alt.data || []).length) {
+        note = t('club_switched', {from: esc(clubNumber), to: esc(c.clubnr)});
+        teams = alt.data;
+        clubNumber = c.clubnr;
+        organization = c.organization_short || organization;
+        break;
+      }
+    }
+  }
+  if (!teams.length) return showError(errText(data.error) || t('no_club_teams'));
   const rows = teams.map(x => {
     const meta = x.group_id ? {assoc: x.team_organisation_short || organization, group: String(x.group_id),
                                season: x.season ? String(x.season).replace('/', '--') : undefined} : null;
@@ -1337,6 +1527,7 @@ async function renderClubTeams(clubNumber, organization, clubName) {
   }).join('');
   const clubFav = favBtn('club', `${clubNumber}:${organization}`, clubName || `Club ${clubNumber}`, {org: organization});
   result.innerHTML = card(t('club_teams_title', {club: esc(clubNumber), org: esc(organization)}) + `<span class="fav-title">${clubFav}</span>`,
+    (note ? `<div class="dim" style="margin-bottom:8px">${note}</div>` : '') +
     `<table><tr><th>${t('th_team_name')}</th><th>${t('th_league_name')}</th><th class="num">Team ID</th><th class="num">Group ID</th><th class="ctr">★</th></tr>${rows}</table>`);
 }
 function doClubTeams() {
