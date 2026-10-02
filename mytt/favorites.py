@@ -8,8 +8,9 @@
 import json
 import sqlite3
 import time
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterator, List, Optional
 
 from .analysis import player_recent_form
 from .api import MyTTApi
@@ -20,14 +21,20 @@ KINDS = ("player", "team", "club")
 
 # ---------- 存储 ----------
 
-def _conn() -> sqlite3.Connection:
+@contextmanager
+def _conn() -> Iterator[sqlite3.Connection]:
+    """单次操作用的连接，用完即关（见 cache.py 中的说明）。"""
     conn = sqlite3.connect(DATA_DB, timeout=10)
-    conn.execute(
-        """CREATE TABLE IF NOT EXISTS favorites (
-             kind TEXT NOT NULL, key TEXT NOT NULL, name TEXT, extra TEXT, added REAL,
-             PRIMARY KEY (kind, key))"""
-    )
-    return conn
+    try:
+        conn.execute(
+            """CREATE TABLE IF NOT EXISTS favorites (
+                 kind TEXT NOT NULL, key TEXT NOT NULL, name TEXT, extra TEXT, added REAL,
+                 PRIMARY KEY (kind, key))"""
+        )
+        with conn:
+            yield conn
+    finally:
+        conn.close()
 
 
 def _row(r) -> Dict[str, Any]:

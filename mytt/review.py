@@ -5,8 +5,9 @@
 """
 import sqlite3
 import time
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterator, List, Optional
 
 from .api import MyTTApi
 
@@ -94,12 +95,18 @@ def head_to_head(api: MyTTApi, nuid: str, opponent: str) -> Dict[str, Any]:
 
 # ---------- 复盘笔记 ----------
 
-def _conn() -> sqlite3.Connection:
+@contextmanager
+def _conn() -> Iterator[sqlite3.Connection]:
+    """单次操作用的连接，用完即关（见 cache.py 中的说明）。"""
     conn = sqlite3.connect(NOTES_DB, timeout=10)
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS notes (key TEXT PRIMARY KEY, text TEXT, updated REAL)"
-    )
-    return conn
+    try:
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS notes (key TEXT PRIMARY KEY, text TEXT, updated REAL)"
+        )
+        with conn:
+            yield conn
+    finally:
+        conn.close()
 
 
 def get_note(key: str) -> Dict[str, Any]:

@@ -9,8 +9,9 @@ import json
 import os
 import sqlite3
 import time
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Iterator, Optional
 
 DB_PATH = Path(__file__).resolve().parent.parent / "mytt_cache.db"
 
@@ -43,12 +44,19 @@ def make_key(scope: str, method: str, path: str, params: Optional[Dict[str, Any]
     return hashlib.sha1(payload.encode()).hexdigest()
 
 
-def _conn() -> sqlite3.Connection:
+@contextmanager
+def _conn() -> Iterator[sqlite3.Connection]:
+    """单次操作用的连接。必须显式 close：`with sqlite3.connect(...)` 只提交事务不关闭，
+    长期运行的服务会一直泄漏文件描述符，达到上限后连 DNS 解析都会失败。"""
     conn = sqlite3.connect(DB_PATH, timeout=10)
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS cache (key TEXT PRIMARY KEY, path TEXT, ts REAL, data TEXT)"
-    )
-    return conn
+    try:
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS cache (key TEXT PRIMARY KEY, path TEXT, ts REAL, data TEXT)"
+        )
+        with conn:          # 正常提交 / 异常回滚
+            yield conn
+    finally:
+        conn.close()
 
 
 def get(key: str, path: str) -> Optional[Any]:
