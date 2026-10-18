@@ -416,7 +416,7 @@ const I18N = {
     loading_ttr: '正在获取实时 TTR...', player_info_title: '👤 球员信息: {nuid}', ttr_label: '实时 TTR',
     loading_history: '正在获取 TTR 历史...',
     unauthorized: '未授权：该接口需要登录，请设置有效的 Cookie Token。', no_history: '未获取到历史数据: {info}',
-    history_title: '📈 {name} · 当前 TTR {ttr} · 最近 {count} 场', unknown: '未知',
+    history_title: '📈 {name} · 当前 TTR {ttr} · 最近 {count} 场', unknown: '未知', hover_loading: '读取中…',
     th_date: '日期', th_delta: '变动', th_after: '赛后', th_score: '比分', th_opponent: '对手 (TTR)', th_opp_club: '对手俱乐部',
     stat_current: '当前 TTR', stat_max: '最高 TTR', stat_span: '生涯跨度', stat_records: ' 场',
     loading_roster: '正在获取阵容...', no_roster: '未获取到球队阵容，请检查 teamId。',
@@ -511,7 +511,7 @@ const I18N = {
     loading_ttr: 'Live-TTR wird geladen...', player_info_title: '👤 Spieler: {nuid}', ttr_label: 'Live-TTR',
     loading_history: 'TTR-Verlauf wird geladen...',
     unauthorized: 'Nicht autorisiert: Anmeldung erforderlich, bitte gültigen Cookie-Token setzen.', no_history: 'Kein Verlauf erhalten: {info}',
-    history_title: '📈 {name} · Aktuelle TTR {ttr} · Letzte {count} Spiele', unknown: 'Unbekannt',
+    history_title: '📈 {name} · Aktuelle TTR {ttr} · Letzte {count} Spiele', unknown: 'Unbekannt', hover_loading: 'wird geladen…',
     th_date: 'Datum', th_delta: 'Änd.', th_after: 'Nachher', th_score: 'Satz', th_opponent: 'Gegner (TTR)', th_opp_club: 'Gegner-Verein',
     stat_current: 'Aktuelle TTR', stat_max: 'Höchste TTR', stat_span: 'Zeitraum', stat_records: ' Spiele',
     loading_roster: 'Kader wird geladen...', no_roster: 'Kein Kader erhalten, bitte Team-ID prüfen.',
@@ -606,7 +606,7 @@ const I18N = {
     loading_ttr: 'Fetching live TTR...', player_info_title: '👤 Player: {nuid}', ttr_label: 'Live TTR',
     loading_history: 'Fetching TTR history...',
     unauthorized: 'Unauthorized: this endpoint requires login, please set a valid Cookie Token.', no_history: 'No history returned: {info}',
-    history_title: '📈 {name} · Current TTR {ttr} · Last {count} games', unknown: 'Unknown',
+    history_title: '📈 {name} · Current TTR {ttr} · Last {count} games', unknown: 'Unknown', hover_loading: 'loading…',
     th_date: 'Date', th_delta: 'Change', th_after: 'After', th_score: 'Score', th_opponent: 'Opponent (TTR)', th_opp_club: 'Opp. Club',
     stat_current: 'Current TTR', stat_max: 'Peak TTR', stat_span: 'Career span', stat_records: ' matches',
     loading_roster: 'Fetching roster...', no_roster: 'No roster returned, please check the team ID.',
@@ -724,6 +724,10 @@ function showTip(el) {
     const [a, b] = g.split(':').map(Number);
     return `<span class="g ${a > b ? 'green' : 'red'}">${esc(g)}</span>`;
   }).join('');
+  placeTip(el);
+}
+// 把提示框摆到元素上方（上方放不下就翻到下方），并夹在视口内
+function placeTip(el) {
   tooltip.classList.add('show');
   const r = el.getBoundingClientRect();
   let left = r.left + scrollX + r.width / 2 - tooltip.offsetWidth / 2;
@@ -734,14 +738,52 @@ function showTip(el) {
   tooltip.style.top = top + 'px';
 }
 function hideTip() { tooltip.classList.remove('show'); }
+// 球员名悬停 2 秒 → 显示实时 TTR。同一 NUID 只查一次，之后直接用记下的值，
+// 免得随手划过表格就打出一串请求（站点会限流）
+const HOVER_DELAY = 2000;
+const HOVER_TTR = new Map();
+let hoverTimer = null, hoverEl = null;
+
+function cancelHover() { clearTimeout(hoverTimer); hoverTimer = null; hoverEl = null; }
+
+function playerTip(el, value) {
+  tooltip.innerHTML = `<b>${esc(el.textContent.trim())}</b> <span class="dim">·</span> TTR ${value}`;
+  placeTip(el);
+}
+
+function hoverPlayer(el) {
+  hoverEl = el;
+  hoverTimer = setTimeout(async () => {
+    const nuid = el.dataset.nuid;
+    if (HOVER_TTR.has(nuid)) return playerTip(el, HOVER_TTR.get(nuid));
+    playerTip(el, `<span class="dim">${t('hover_loading')}</span>`);
+    let value;
+    try {
+      // 固定走本地缓存（不跟随"强制联网"开关），悬停不该是联网动作
+      const r = await fetch(`/api/player/${encodeURIComponent(nuid)}/ttr`);
+      const d = await r.json();
+      value = d.ttr != null ? ttrHtml(d.ttr) : `<span class="yellow">${esc(errText(d.error) || t('unknown'))}</span>`;
+      if (d.ttr != null) HOVER_TTR.set(nuid, value);
+    } catch {
+      value = `<span class="red">${t('err_network')}</span>`;
+    }
+    if (hoverEl === el) playerTip(el, value);   // 鼠标已经移走就不再弹出来
+  }, HOVER_DELAY);
+}
+
 document.addEventListener('mouseover', e => {
-  const el = e.target.closest('.score[data-games]');
-  if (el) showTip(el);
+  const score = e.target.closest('.score[data-games]');
+  if (score) return showTip(score);
+  const player = e.target.closest('.pname[data-nuid]');
+  if (player && player !== hoverEl) { cancelHover(); hoverPlayer(player); }
 });
 document.addEventListener('mouseout', e => {
   if (e.target.closest('.score[data-games]')) hideTip();
+  const player = e.target.closest('.pname[data-nuid]');
+  if (player && !player.contains(e.relatedTarget)) { cancelHover(); hideTip(); }
 });
-addEventListener('scroll', hideTip, true);
+document.addEventListener('click', cancelHover);
+addEventListener('scroll', () => { cancelHover(); hideTip(); }, true);
 
 // ---------- 基础 ----------
 async function api(path, params) {
@@ -848,7 +890,7 @@ function formHtml(form) {
 // 有 nuid（NU 开头的 internal_id / person_id）时把人名渲染成可点击链接，跳到其 TTR 历史
 function nameLink(name, nuid) {
   name = String(name ?? '').trim() || '-';
-  return nuid ? `<span class="pname" onclick="historyFor('${esc(String(nuid))}')">${esc(name)}</span>` : esc(name);
+  return nuid ? `<span class="pname" data-nuid="${esc(String(nuid))}" onclick="historyFor('${esc(String(nuid))}')">${esc(name)}</span>` : esc(name);
 }
 // ---------- 关注列表（★ 收藏球员 / 球队 / 俱乐部，存后端 SQLite）----------
 const FAVS = new Map();               // "kind:key" -> 收藏项
