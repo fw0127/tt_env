@@ -113,6 +113,71 @@ def team_season_matches(api: MyTTApi, association: str, group_id: str, team_id: 
     }
 
 
+def today_matches(api: MyTTApi, teams: List[Dict[str, Any]], date: Optional[str] = None) -> Dict[str, Any]:
+    """关注球队所在小组里「今天」的比赛，带实时比分。
+
+    teams 是关注列表中的球队项，需要 extra 里的 assoc / group（早期关注的没有，只能跳过）。
+    赛程按小组取（每个小组一次，走一天的本地缓存），比分再逐场查 Live 接口（该接口不缓存）。
+    """
+    date = date or datetime.now().strftime("%Y-%m-%d")
+    mine = {str(t.get("key")) for t in teams}
+
+    groups: Dict[tuple, None] = {}       # 去重，保持关注顺序
+    skipped = 0
+    for t in teams:
+        ex = t.get("extra") or {}
+        if ex.get("assoc") and ex.get("group"):
+            groups[(ex["assoc"], str(ex["group"]), ex.get("season") or current_season())] = None
+        else:
+            skipped += 1
+
+    matches: List[Dict[str, Any]] = []
+    errors: List[str] = []
+    for assoc, group_id, season in groups:
+        data = api.get_group_schedule_loader(assoc, season, "x", group_id)
+        if not isinstance(data, dict) or not isinstance(data.get("data"), dict):
+            errors.append(f"{assoc}/{group_id}")
+            continue
+        for day in data["data"].get("meetings") or []:
+            for m in (x for ms in day.values() for x in ms):
+                if (m.get("date") or "")[:10] != date:
+                    continue
+                home_id, away_id = str(m.get("team_home_id")), str(m.get("team_away_id"))
+                matches.append({
+                    "meeting_id": m.get("meeting_id"),
+                    "date": m.get("date"),
+                    "home": m.get("team_home"), "home_id": home_id,
+                    "away": m.get("team_away"), "away_id": away_id,
+                    "league": m.get("league_name"),
+                    "state": m.get("state"),
+                    "live": bool(m.get("live")),
+                    "mine_home": home_id in mine, "mine_away": away_id in mine,
+                    "mine": home_id in mine or away_id in mine,
+                    "location": (m.get("location") or {}).get("label"),
+                    "score": None,
+                })
+
+    # 逐场取当前比分：Live 接口不走缓存，拿到的是此刻的实时状态。
+    # 小组赛程缓存一天，里面的 state / live 会过期，所以状态以这里为准：
+    # 打完的有 is_completed；进行中的 is_completed 为空但已经有比分（live 标志不可靠，常年是 false）。
+    for m in matches:
+        if not m["meeting_id"]:
+            m["status"] = "done" if m["state"] == "done" else "upcoming"
+            continue
+        d = (api.get_meeting_live(str(m["meeting_id"])) or {}).get("data") or {}
+        done = bool(d.get("is_completed")) or (not d and m["state"] == "done")
+        hs, as_ = d.get("matches_home") or 0, d.get("matches_guest") or 0
+        if hs or as_:
+            m["score"] = {"home": hs, "away": as_}
+        m["status"] = "done" if done else ("live" if (hs or as_ or d.get("live")) else "upcoming")
+        m["live"] = m["status"] == "live"
+
+    order = {"live": 0, "upcoming": 1, "done": 2}
+    matches.sort(key=lambda x: (order.get(x.get("status"), 3), x["date"] or ""))
+    return {"date": date, "matches": matches, "groups": len(groups),
+            "skipped": skipped, "errors": errors}
+
+
 def collect_war_room(api: MyTTApi, my_team_id: str) -> Dict[str, Any]:
     """作战室数据：锁定下一场对手并收集其阵容与近况。
     出错时返回 {'error': 提示文本}。"""

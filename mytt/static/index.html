@@ -174,6 +174,7 @@
     <button data-tab="war" data-i18n="nav_war">⚔️ 作战室</button>
     <button data-tab="review" data-i18n="nav_review">📝 复盘</button>
     <button data-tab="fav" data-i18n="nav_fav">⭐ 关注</button>
+    <button data-tab="today" data-i18n="nav_today">📅 今日</button>
     <button data-tab="calc" data-i18n="nav_calc">🧮 计算</button>
     <button data-tab="more" data-i18n="nav_more">🏆 更多</button>
   </nav>
@@ -244,6 +245,20 @@
         <button class="btn alt" onclick="doFavorites(true)" data-i18n="btn_fav_refresh">🔄 刷新（跳过缓存）</button>
       </div>
       <p class="hint" data-i18n="hint_fav">在搜索结果、球员历史、球队与俱乐部页面点击 ☆ 即可加入关注。面板会汇总关注球员的实时 TTR 与近况、关注球队的下一场比赛、关注俱乐部的球队数量。</p>
+    </div>
+  </section>
+
+  <section id="tab-today">
+    <div class="card">
+      <div class="row">
+        <input id="todayDate" type="date" style="flex:0 0 180px">
+        <button class="btn" onclick="doToday()" data-i18n="today_refresh">刷新</button>
+        <label class="hint" style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:0 0 auto">
+          <input type="checkbox" id="todayAuto" checked style="flex:0;min-width:auto">
+          <span data-i18n="today_auto">有比赛进行中时每分钟自动刷新</span>
+        </label>
+      </div>
+      <p class="hint" data-i18n="today_hint">列出关注球队所在联赛当天的全部比赛，进行中的排在最前，点比分看单场详情。早期关注、没有联赛信息的球队会被跳过，重新从俱乐部球队列表里关注一次即可。</p>
     </div>
   </section>
 
@@ -345,6 +360,12 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 const I18N = {
   zh: {
     app_title: 'MyTT 助手', app_sub: 'Web 版',
+    nav_today: '📅 今日',
+    today_refresh: '刷新', today_auto: '有比赛进行中时每分钟自动刷新',
+    today_hint: '列出关注球队所在联赛当天的全部比赛，进行中的排在最前，点比分看单场详情。早期关注、没有联赛信息的球队会被跳过，重新从俱乐部球队列表里关注一次即可。',
+    today_loading: '正在查今日比赛...', today_title: '📅 {date} 的比赛（{groups} 个联赛）',
+    today_none: '当天没有比赛。', today_live: '进行中', today_upcoming: '未开始', today_done: '已结束',
+    today_skipped: '{n} 支关注球队缺联赛信息，已跳过。', today_errors: '{n} 个联赛赛程获取失败。', th_time: '时间',
     nav_calc: '🧮 计算',
     calc_ph_nuid: '球员 NUID（可选，自动填入 TTR 与系数）', calc_btn_me: '取我的 TTR', calc_ph_ttr: '我的 TTR',
     calc_ph_team: '对手 Team ID（可选，载入整队 TTR）', calc_btn_team: '载入对手', calc_add: '+ 添加对手', calc_run: '计算',
@@ -440,6 +461,12 @@ const I18N = {
   },
   de: {
     app_title: 'MyTT Assistent', app_sub: 'Web',
+    nav_today: '📅 Heute',
+    today_refresh: 'Aktualisieren', today_auto: 'Jede Minute aktualisieren, solange gespielt wird',
+    today_hint: 'Alle Spiele des Tages in den Ligen der gemerkten Mannschaften; laufende zuerst. Klick auf das Ergebnis zeigt die Einzelspiele. Früher gemerkte Mannschaften ohne Liga-Info werden übersprungen – einfach nochmal über die Mannschaftsliste des Vereins merken.',
+    today_loading: 'Spiele von heute werden geladen...', today_title: '📅 Spiele am {date} ({groups} Ligen)',
+    today_none: 'An diesem Tag keine Spiele.', today_live: 'läuft', today_upcoming: 'noch nicht', today_done: 'beendet',
+    today_skipped: '{n} gemerkte Mannschaft(en) ohne Liga-Info übersprungen.', today_errors: '{n} Spielplan/Spielpläne nicht erhalten.', th_time: 'Zeit',
     nav_calc: '🧮 Rechner',
     calc_ph_nuid: 'Spieler-NUID (optional, füllt TTR und Konstante)', calc_btn_me: 'Eigene TTR holen', calc_ph_ttr: 'Eigene TTR',
     calc_ph_team: 'Gegner Team-ID (optional, ganze Mannschaft laden)', calc_btn_team: 'Gegner laden', calc_add: '+ Gegner', calc_run: 'Berechnen',
@@ -535,6 +562,12 @@ const I18N = {
   },
   en: {
     app_title: 'MyTT Assistant', app_sub: 'Web',
+    nav_today: '📅 Today',
+    today_refresh: 'Refresh', today_auto: 'Refresh every minute while a match is running',
+    today_hint: "Every match today in the leagues of your followed teams, running ones first. Click a score for the individual matches. Teams followed before league info was stored are skipped — follow them again from the club's team list.",
+    today_loading: "Loading today's matches...", today_title: '📅 Matches on {date} ({groups} leagues)',
+    today_none: 'No matches on this day.', today_live: 'live', today_upcoming: 'not started', today_done: 'finished',
+    today_skipped: '{n} followed team(s) without league info were skipped.', today_errors: '{n} league schedule(s) could not be loaded.', th_time: 'Time',
     nav_calc: '🧮 Calculator',
     calc_ph_nuid: 'Player NUID (optional, fills TTR and constant)', calc_btn_me: 'Get my TTR', calc_ph_ttr: 'My TTR',
     calc_ph_team: 'Opponent team ID (optional, load whole team)', calc_btn_team: 'Load opponents', calc_add: '+ Opponent', calc_run: 'Calculate',
@@ -1419,6 +1452,57 @@ function doWarRoom() {
         </table></div>
       </div>`;
   });
+}
+
+// ---------- 今日比赛 ----------
+let todayTimer = null;
+
+function doToday() { run(t('today_loading'), renderToday); }
+
+async function renderToday() {
+  const d = await api('/api/today', {date: $('todayDate').value || undefined});
+  const ms = d.matches || [];
+  const pad = n => String(n).padStart(2, '0');
+  const hhmm = iso => { const x = new Date(iso); return isNaN(x) ? '-' : `${pad(x.getHours())}:${pad(x.getMinutes())}`; };
+  const badge = {live: 'hot', upcoming: 'flat', done: 'flat'};
+
+  const rows = ms.map(m => {
+    const side = (name, isMine) => isMine ? `<b>${esc(name || '-')}</b>` : esc(name || '-');
+    const sc = m.score ? `${m.score.home}:${m.score.away}` : '-';
+    const score = m.meeting_id
+      ? `<span class="pname" onclick="meetingFor('${esc(m.meeting_id)}')">${sc}</span>` : sc;
+    return `<tr${m.mine ? '' : ' class="dim"'}>
+      <td class="date">${hhmm(m.date)}</td>
+      <td class="ctr"><span class="badge ${badge[m.status] || 'flat'}">${t('today_' + m.status)}</span></td>
+      <td>${side(m.home, m.mine_home)} <span class="dim">${t('vs')}</span> ${side(m.away, m.mine_away)}</td>
+      <td class="ctr ${m.status === 'live' ? 'yellow' : ''}">${score}</td>
+      <td class="dim venue" title="${esc(m.league || '')}">${esc(m.league || '')}</td></tr>`;
+  }).join('');
+
+  const note = [
+    d.skipped ? t('today_skipped', {n: d.skipped}) : '',
+    (d.errors || []).length ? t('today_errors', {n: d.errors.length}) : '',
+  ].filter(Boolean).join(' ');
+
+  result.innerHTML = `<div class="card" id="todayCard">
+    <div class="panel-title">${t('today_title', {date: esc(d.date), groups: d.groups})}</div>
+    ${note ? `<div class="dim" style="margin-bottom:8px">${note}</div>` : ''}
+    <div class="scroll">${ms.length
+      ? `<table><tr><th>${t('th_time')}</th><th class="ctr">${t('th_state')}</th><th>${t('th_matchup')}</th>
+          <th class="ctr">${t('th_score')}</th><th>${t('th_league_name')}</th></tr>${rows}</table>`
+      : `<span class="dim">${t('today_none')}</span>`}</div></div>`;
+  scheduleToday(ms);
+}
+
+// 有比赛进行中才自动刷新（每分钟一次，只刷这一个接口）
+function scheduleToday(ms) {
+  clearTimeout(todayTimer);
+  if (!$('todayAuto').checked || !ms.some(m => m.status === 'live')) return;
+  todayTimer = setTimeout(() => {
+    // 用户已经翻到别的页面就停下，别把人家正在看的内容覆盖掉
+    if (!$('tab-today').classList.contains('active') || !$('todayCard')) return;
+    renderToday().catch(() => {});
+  }, 60000);
 }
 
 // ---------- TTR 计算器 ----------
