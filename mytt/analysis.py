@@ -277,37 +277,42 @@ def predict_live(api: MyTTApi, meeting_id: str) -> Dict[str, Any]:
                 singles_away.setdefault(int(a_no), pa)
 
     # 还没登场的位置用队内排名补齐
-    def fill_from_roster(team_id: Optional[str], known: Dict[int, Dict[str, Any]],
-                         present: set) -> None:
-        """还没登场的位置（通常是 5、6 号）只能猜，标记 assumed 让界面注明。
+    def fill_lineup(team_id: Optional[str], known: Dict[int, Dict[str, Any]],
+                    present: List[Dict[str, Any]]) -> None:
+        """补上还没登场的单打位置，标记 assumed 让界面注明。
 
-        不能直接拿队内最强的几个来填：今天没来的往往正是排名靠前的人。
-        改为从「已登场球员里最靠后的那个排名」继续往下取，不够再由弱到强补。
+        六人 Paarkreuz 的三场双打正好用满六名队员 —— 没打双打的人不会再打单打。
+        所以空位只能从双打登场的这六人里取（他们未必在队内名单上，可能是从别的
+        队借调的）。三场双打还没全部录入时，才回退到队内排名。
         """
         missing = [i for i in range(1, 7) if i not in known]
-        if not team_id or not missing:
+        if not missing:
             return
         used = {p.get("nuid") for p in known.values()}
-        roster = [p for p in collect_team_analysis(api, str(team_id)) if p.get("ttr")]
-        rank_of = lambda p: int(p["rank"]) if str(p.get("rank", "")).isdigit() else 99
-        by_nuid = {p["nuid"]: p for p in roster}
+        pool = [p for p in present if p.get("nuid") not in used]
+        pool.sort(key=lambda p: -(ttr_of(p.get("nuid")) or 0))   # 强的排前面当 5 号
+        certain = {p["nuid"] for p in pool}       # 来自双打的六人，人选是确定的
 
-        # 已经打过双打的人一定在场，优先拿来填空缺的单打位置
-        here = [by_nuid[n] for n in present if n not in used and n in by_nuid]
-        rest = [p for p in roster if p["nuid"] not in used and p not in here]
-        floor = max((rank_of(p) for p in roster if p["nuid"] in used), default=0)
-        pool = sorted(here, key=rank_of)
-        pool += [p for p in rest if rank_of(p) > floor]
-        pool += [p for p in sorted(rest, key=rank_of, reverse=True) if p not in pool]
+        if len(pool) < len(missing) and team_id:
+            seen = used | certain
+            roster = [p for p in collect_team_analysis(api, str(team_id))
+                      if p.get("ttr") and p["nuid"] not in seen]
+            rank_of = lambda p: int(p["rank"]) if str(p.get("rank", "")).isdigit() else 99
+            for p in sorted(roster, key=rank_of, reverse=True):   # 由弱到强补
+                pool.append({"name": p["name"], "nuid": p["nuid"]})
+                if p["nuid"] not in ttr_cache:
+                    ttr_cache[p["nuid"]] = int(p["ttr"])
+
         for i, p in zip(missing, pool):
-            known[i] = {"name": p["name"], "nuid": p["nuid"], "assumed": True}
-            if p["nuid"] not in ttr_cache:
-                ttr_cache[p["nuid"]] = int(p["ttr"])
+            # 只剩一个空位、且人选来自双打六人时就不是猜的了，唯一解
+            sure = len(missing) == 1 and p["nuid"] in certain
+            known[i] = {"name": p["name"], "nuid": p["nuid"],
+                        **({} if sure else {"assumed": True})}
 
-    present_home = {p["nuid"] for pair in doubles_home.values() for p in pair}
-    present_away = {p["nuid"] for pair in doubles_away.values() for p in pair}
-    fill_from_roster(d.get("team_home_id"), singles_home, present_home)
-    fill_from_roster(d.get("team_guest_id"), singles_away, present_away)
+    present_home = [p for pair in doubles_home.values() for p in pair]
+    present_away = [p for pair in doubles_away.values() for p in pair]
+    fill_lineup(d.get("team_home_id"), singles_home, present_home)
+    fill_lineup(d.get("team_guest_id"), singles_away, present_away)
 
     def side_ttr(players: List[Dict[str, Any]]) -> Optional[float]:
         vals = [v for v in (ttr_of(p.get("nuid")) for p in players) if v]
