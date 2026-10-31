@@ -100,6 +100,7 @@ def team_season_matches(api: MyTTApi, association: str, group_id: str, team_id: 
         "season": season,
         "association": association,
         "group_id": group_id,
+        "team_id": str(team_id),
         "team_name": team_name,
         "league": head.get("league_name"),
         "matches": matches,
@@ -110,6 +111,87 @@ def team_season_matches(api: MyTTApi, association: str, group_id: str, team_id: 
             "lost": sum(x["result"] == "L" for x in played),
             "remaining": len(matches) - len(played),
         },
+    }
+
+
+# 六人 Paarkreuz 的固定出场顺序（已对照真实比赛数据核实）：
+# 3 场双打 → 交叉单打 1-2/2-1/3-4/4-3/5-6/6-5 → 对位单打 1-1…6-6 → 最后一场双打，先到 9 分结束。
+SINGLES_ORDER = [(0, 1), (1, 0), (2, 3), (3, 2), (4, 5), (5, 4),
+                 (0, 0), (1, 1), (2, 2), (3, 3), (4, 4), (5, 5)]
+DOUBLES_NAMES = ["D1-D2", "D2-D1", "D3-D3"]
+FINAL_DOUBLE = "D1-D1"
+
+
+def win_probability(own_ttr: float, opp_ttr: float) -> float:
+    """德国 TTR 的单场胜率预期（与站点的 expected_result 一致）。"""
+    return 1 / (1 + 10 ** ((opp_ttr - own_ttr) / 150))
+
+
+def _score_distribution(probs: List[float], target: int) -> Dict[tuple, float]:
+    """按出场顺序逐场推概率，一方先到 target 分即结束。返回 {(主分, 客分): 概率}。"""
+    dist: Dict[tuple, float] = {(0, 0): 1.0}
+    for p in probs:
+        nxt: Dict[tuple, float] = {}
+        for (h, a), w in dist.items():
+            if h >= target or a >= target:       # 已经结束，比分不再变
+                nxt[(h, a)] = nxt.get((h, a), 0) + w
+                continue
+            nxt[(h + 1, a)] = nxt.get((h + 1, a), 0) + w * p
+            nxt[(h, a + 1)] = nxt.get((h, a + 1), 0) + w * (1 - p)
+        dist = nxt
+    return dist
+
+
+def predict_meeting(api: MyTTApi, home_team_id: str, away_team_id: str) -> Dict[str, Any]:
+    """按双方阵容的实时 TTR 预测一场团体赛。
+
+    单打按 Paarkreuz 的固定对位逐场算胜率；双打无法预知配对（真实比赛里 D1 可能由
+    2 号和 6 号组成），统一用两队前六名的平均 TTR 估一个胜率，四场双打共用。
+    """
+    home = [p for p in collect_team_analysis(api, home_team_id) if p.get("ttr")][:6]
+    away = [p for p in collect_team_analysis(api, away_team_id) if p.get("ttr")][:6]
+    if not home or not away:
+        return {"error": "无法获取双方阵容的 TTR"}
+
+    n = min(len(home), len(away))
+    avg = lambda ps: sum(int(p["ttr"]) for p in ps) / len(ps)
+    p_double = win_probability(avg(home), avg(away))
+
+    fixtures: List[Dict[str, Any]] = []
+    for name in DOUBLES_NAMES:
+        fixtures.append({"name": name, "type": "double", "home": None, "away": None, "p": p_double})
+    for hi, ai in SINGLES_ORDER:
+        if hi >= n or ai >= n:
+            continue
+        h, a = home[hi], away[ai]
+        fixtures.append({
+            "name": f"{hi + 1}-{ai + 1}", "type": "single",
+            "home": {"name": h["name"], "nuid": h["nuid"], "ttr": h["ttr"]},
+            "away": {"name": a["name"], "nuid": a["nuid"], "ttr": a["ttr"]},
+            "p": win_probability(int(h["ttr"]), int(a["ttr"])),
+        })
+    fixtures.append({"name": FINAL_DOUBLE, "type": "double", "home": None, "away": None, "p": p_double})
+
+    target = len(fixtures) // 2 + 1            # 16 场 → 先到 9 分
+    dist = _score_distribution([f["p"] for f in fixtures], target)
+    home_win = sum(w for (h, a), w in dist.items() if h > a)
+    draw = sum(w for (h, a), w in dist.items() if h == a)
+    top = sorted(dist.items(), key=lambda kv: -kv[1])[:5]
+
+    return {
+        "home_team_id": str(home_team_id), "away_team_id": str(away_team_id),
+        "home_players": home[:n], "away_players": away[:n],
+        "home_avg": round(avg(home[:n])), "away_avg": round(avg(away[:n])),
+        "fixtures": fixtures,
+        "target": target,
+        "probabilities": {"home": home_win, "draw": draw, "away": 1 - home_win - draw},
+        "expected": {
+            "home": sum(h * w for (h, a), w in dist.items()),
+            "away": sum(a * w for (h, a), w in dist.items()),
+        },
+        "likely_scores": [{"home": h, "away": a, "p": w} for (h, a), w in top],
+        "roster_size": n,
+        "doubles_note": True,
     }
 
 

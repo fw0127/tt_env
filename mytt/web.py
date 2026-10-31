@@ -15,7 +15,7 @@ from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
 
 from . import auth, cache, favorites, review
-from .analysis import collect_team_analysis, collect_war_room, team_season_matches, today_matches
+from .analysis import collect_team_analysis, collect_war_room, team_season_matches, predict_meeting, today_matches
 from .api import MyTTApi, clean_roster
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -271,6 +271,12 @@ def favorites_add(body: FavBody) -> Dict[str, Any]:
 @app.delete("/api/favorites")
 def favorites_remove(kind: str, key: str) -> Dict[str, Any]:
     return favorites.remove(kind, key)
+
+
+@app.get("/api/predict")
+def predict(home_team_id: str, away_team_id: str) -> Dict[str, Any]:
+    """团体赛预测：按双方阵容实时 TTR 推算比分分布。"""
+    return predict_meeting(_api, home_team_id, away_team_id)
 
 
 @app.get("/api/today")

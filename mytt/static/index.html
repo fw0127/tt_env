@@ -225,6 +225,14 @@
       </div>
       <p class="hint" data-i18n="hint_war">自动锁定下一场对手，逐人分析实时 TTR 与近 5 场状态，需要 1-2 分钟。</p>
     </div>
+    <div class="card">
+      <div class="row">
+        <input id="predHome" data-history="predHome" autocomplete="off" data-i18n-ph="pred_ph_home" placeholder="主队 Team ID" onkeydown="if(event.key==='Enter')doPredict()">
+        <input id="predAway" data-history="predAway" autocomplete="off" data-i18n-ph="pred_ph_away" placeholder="客队 Team ID" onkeydown="if(event.key==='Enter')doPredict()">
+        <button class="btn" onclick="doPredict()" data-i18n="pred_btn">🔮 预测比分</button>
+      </div>
+      <p class="hint" data-i18n="pred_hint">按双方阵容的实时 TTR 推算六人 Paarkreuz 的 16 场对阵，给出比分分布。阵容取当前排名前六，未必是当天实际上场的人；双打无法预知配对，用两队平均 TTR 估算。</p>
+    </div>
   </section>
 
   <section id="tab-review">
@@ -360,6 +368,12 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 const I18N = {
   zh: {
     app_title: 'MyTT 助手', app_sub: 'Web 版',
+    pred_ph_home: '主队 Team ID', pred_ph_away: '客队 Team ID', pred_btn: '🔮 预测比分',
+    pred_hint: '按双方阵容的实时 TTR 推算六人 Paarkreuz 的 16 场对阵，给出比分分布。阵容取当前排名前六，未必是当天实际上场的人；双打无法预知配对，用两队平均 TTR 估算。',
+    pred_loading: '正在预测（逐人取实时 TTR，稍等）...', pred_home: '主队', pred_away: '客队',
+    pred_home_win: '主胜', pred_draw: '平局', pred_away_win: '客胜', pred_expected: '期望比分', pred_avg_ttr: '平均 TTR',
+    pred_likely: '最可能的比分', pred_fixture: '场次', pred_win_rate: '主队胜率', pred_doubles: '双打（按平均 TTR 估）',
+    pred_note: '单打按 Paarkreuz 固定对位逐场计算（每队取前 {n} 人），先到 {target} 分结束。双打配对赛前无法得知，四场双打统一用两队平均 TTR 估算。回测约一半场次能命中实际比分，但分差往往估得偏大。',
     nav_today: '📅 今日',
     today_refresh: '刷新', today_auto: '有比赛进行中时每分钟自动刷新',
     today_hint: '列出关注球队所在联赛当天的全部比赛，进行中的排在最前，点比分看单场详情。早期关注、没有联赛信息的球队会被跳过，重新从俱乐部球队列表里关注一次即可。',
@@ -461,6 +475,12 @@ const I18N = {
   },
   de: {
     app_title: 'MyTT Assistent', app_sub: 'Web',
+    pred_ph_home: 'Team-ID Heim', pred_ph_away: 'Team-ID Gast', pred_btn: '🔮 Ergebnis vorhersagen',
+    pred_hint: 'Rechnet die 16 Spiele des Sechser-Paarkreuz-Systems aus den Live-TTR beider Mannschaften durch. Genommen werden die aktuellen Top 6 – nicht zwingend die, die antreten; Doppelaufstellungen sind vorab unbekannt und werden über den TTR-Schnitt geschätzt.',
+    pred_loading: 'Vorhersage läuft (Live-TTR pro Spieler)...', pred_home: 'Heim', pred_away: 'Gast',
+    pred_home_win: 'Heimsieg', pred_draw: 'Unentschieden', pred_away_win: 'Auswärtssieg', pred_expected: 'Erwartetes Ergebnis', pred_avg_ttr: 'TTR-Schnitt',
+    pred_likely: 'Wahrscheinlichste Ergebnisse', pred_fixture: 'Spiel', pred_win_rate: 'Siegchance Heim', pred_doubles: 'Doppel (über TTR-Schnitt)',
+    pred_note: 'Einzel nach den festen Paarkreuz-Paarungen (je {n} Spieler), bis {target} Punkte. Die Doppelaufstellung ist vorab nicht bekannt, daher für alle vier Doppel der TTR-Schnitt. Im Rückblick trifft etwa die Hälfte der Vorhersagen das reale Ergebnis, die Höhe wird meist überschätzt.',
     nav_today: '📅 Heute',
     today_refresh: 'Aktualisieren', today_auto: 'Jede Minute aktualisieren, solange gespielt wird',
     today_hint: 'Alle Spiele des Tages in den Ligen der gemerkten Mannschaften; laufende zuerst. Klick auf das Ergebnis zeigt die Einzelspiele. Früher gemerkte Mannschaften ohne Liga-Info werden übersprungen – einfach nochmal über die Mannschaftsliste des Vereins merken.',
@@ -562,6 +582,12 @@ const I18N = {
   },
   en: {
     app_title: 'MyTT Assistant', app_sub: 'Web',
+    pred_ph_home: 'Home team ID', pred_ph_away: 'Away team ID', pred_btn: '🔮 Predict result',
+    pred_hint: "Works through the 16 fixtures of the six-player Paarkreuz format using both teams' live TTR. It takes the current top six, who are not necessarily the players fielded; doubles line-ups cannot be known in advance and are estimated from each team's average TTR.",
+    pred_loading: 'Predicting (fetching live TTR per player)...', pred_home: 'Home', pred_away: 'Away',
+    pred_home_win: 'Home win', pred_draw: 'Draw', pred_away_win: 'Away win', pred_expected: 'Expected score', pred_avg_ttr: 'Average TTR',
+    pred_likely: 'Most likely scores', pred_fixture: 'Fixture', pred_win_rate: 'Home win chance', pred_doubles: 'Doubles (from average TTR)',
+    pred_note: 'Singles use the fixed Paarkreuz pairings ({n} players per team), first to {target} points. Doubles line-ups are unknown beforehand, so all four doubles use each team\'s average TTR. Back-testing hit the real score about half the time, but tends to overestimate the margin.',
     nav_today: '📅 Today',
     today_refresh: 'Refresh', today_auto: 'Refresh every minute while a match is running',
     today_hint: "Every match today in the leagues of your followed teams, running ones first. Click a score for the individual matches. Teams followed before league info was stored are skipped — follow them again from the club's team list.",
@@ -1397,7 +1423,8 @@ function teamMatchesCard(r, meta) {
     const cls = {W: 'green', L: 'red', D: 'yellow'}[m.result] || 'dim';
     const score = m.result
       ? `<span class="pname ${cls}" title="${t('tm_details')}" onclick="meetingFor('${esc(m.meeting_id)}')">${m.own}:${m.opp}</span>`
-      : `<span class="dim">${m.state === 'scheduled' ? '-' : esc(m.state || '-')}</span>`;
+      : (r.team_id ? `<span class="pname" title="${t('pred_btn')}" onclick="predictFor('${esc(m.home ? r.team_id : m.opponent_id)}','${esc(m.home ? m.opponent_id : r.team_id)}','${esc(m.home ? (r.team_name || '') : (m.opponent || ''))}','${esc(m.home ? (m.opponent || '') : (r.team_name || ''))}')">🔮</span>`
+         : `<span class="dim">-</span>`);
     return `<tr><td class="date">${when(m.date)}</td>
       <td class="ctr dim">${t(m.home ? 'tm_home' : 'tm_away')}</td>
       <td><span class="pname" onclick="teamAnalysisFor('${esc(m.opponent_id)}','${esc(m.opponent || '')}',${metaArg(meta)})">${esc(m.opponent || '-')}</span></td>
@@ -1454,6 +1481,54 @@ function doWarRoom() {
   });
 }
 
+// ---------- 团体赛预测 ----------
+function doPredict() {
+  const h = $('predHome').value.trim(), a = $('predAway').value.trim();
+  if (!h || !a) return;
+  HISTORY.add('predHome', h); HISTORY.add('predAway', a);
+  predictFor(h, a);
+}
+
+function predictFor(homeId, awayId, homeName, awayName) {
+  result.scrollIntoView({behavior: 'smooth', block: 'start'});
+  run(t('pred_loading'), async () => {
+    const d = await api('/api/predict', {home_team_id: homeId, away_team_id: awayId});
+    if (d.error) return showError(errText(d.error));
+    const pct = x => (x * 100).toFixed(1) + '%';
+    const p = d.probabilities;
+
+    const rows = d.fixtures.map(f => {
+      const cell = side => f[side]
+        ? `${nameLink(f[side].name, f[side].nuid)} <span class="dim">(${esc(f[side].ttr)})</span>`
+        : `<span class="dim">${t('pred_doubles')}</span>`;
+      const cls = f.p >= 0.6 ? 'green' : f.p <= 0.4 ? 'red' : 'yellow';
+      return `<tr${f.type === 'double' ? ' class="dim"' : ''}>
+        <td class="dim">${esc(f.name)}</td>
+        <td>${cell('home')}</td>
+        <td class="num ${cls}">${pct(f.p)}</td>
+        <td>${cell('away')}</td></tr>`;
+    }).join('');
+
+    const scores = d.likely_scores
+      .map(x => `<span class="g">${x.home}:${x.away} <span class="dim">${pct(x.p)}</span></span>`).join('  ');
+
+    const bar = `<div class="sumbar">
+      <div><span class="k">${t('pred_home_win')}</span><span class="v green">${pct(p.home)}</span></div>
+      <div><span class="k">${t('pred_draw')}</span><span class="v yellow">${pct(p.draw)}</span></div>
+      <div><span class="k">${t('pred_away_win')}</span><span class="v red">${pct(p.away)}</span></div>
+      <div><span class="k">${t('pred_expected')}</span><span class="v">${d.expected.home.toFixed(1)} : ${d.expected.away.toFixed(1)}</span></div>
+      <div><span class="k">${t('pred_avg_ttr')}</span><span class="v">${d.home_avg} : ${d.away_avg}</span></div>
+    </div>`;
+
+    const title = `🔮 ${esc(homeName || t('pred_home') + ' ' + homeId)} <span class="dim">${t('vs')}</span> ${esc(awayName || t('pred_away') + ' ' + awayId)}`;
+    result.innerHTML = card(title, bar +
+      `<div style="margin-bottom:10px">${t('pred_likely')}: ${scores}</div>` +
+      `<table><tr><th>${t('pred_fixture')}</th><th>${esc(homeName || t('pred_home'))}</th>
+        <th class="num">${t('pred_win_rate')}</th><th>${esc(awayName || t('pred_away'))}</th></tr>${rows}</table>` +
+      `<p class="hint" style="margin-top:10px">${t('pred_note', {n: d.roster_size, target: d.target})}</p>`);
+  });
+}
+
 // ---------- 今日比赛 ----------
 let todayTimer = null;
 
@@ -1469,8 +1544,9 @@ async function renderToday() {
   const rows = ms.map(m => {
     const side = (name, isMine) => isMine ? `<b>${esc(name || '-')}</b>` : esc(name || '-');
     const sc = m.score ? `${m.score.home}:${m.score.away}` : '-';
-    const score = m.meeting_id
-      ? `<span class="pname" onclick="meetingFor('${esc(m.meeting_id)}')">${sc}</span>` : sc;
+    const score = m.status === 'upcoming'
+      ? `<span class="pname" title="${t('pred_btn')}" onclick="predictFor('${esc(m.home_id)}','${esc(m.away_id)}','${esc(m.home || '')}','${esc(m.away || '')}')">🔮</span>`
+      : (m.meeting_id ? `<span class="pname" onclick="meetingFor('${esc(m.meeting_id)}')">${sc}</span>` : sc);
     return `<tr${m.mine ? '' : ' class="dim"'}>
       <td class="date">${hhmm(m.date)}</td>
       <td class="ctr"><span class="badge ${badge[m.status] || 'flat'}">${t('today_' + m.status)}</span></td>
