@@ -1558,14 +1558,18 @@ function predictLiveFor(meetingId) {
             return `${nameLink(x.name, x.nuid)}<span class="dim">(${esc(x.ttr ?? '?')})${x.assumed ? '?' : ''}</span>`;
           }).join(' / ')
         : '<span class="dim">-</span>';
-      const sets = `${f.sets[0]}:${f.sets[1]}`;
+      // 已打的局分挂到比分上，悬停显示（与 TTR 历史、单场详情一致）
+      const games = f.games || [];
+      const sets = games.length
+        ? `<span class="score" data-games="${games.join(',')}">${f.sets[0]}:${f.sets[1]}</span>`
+        : `${f.sets[0]}:${f.sets[1]}`;
       const chance = f.status === 'done'
         ? `<span class="${f.p > 0.5 ? 'green' : 'red'}">${sets}</span>`
         : `<span class="${f.p >= 0.6 ? 'green' : f.p <= 0.4 ? 'red' : 'yellow'}">${pct(f.p)}</span>`;
       return `<tr${f.status === 'done' ? ' class="dim"' : ''}>
         <td class="dim">${esc(f.name)}</td>
         <td class="ctr"><span class="badge ${f.status === 'running' ? 'hot' : 'flat'}">${t('predl_' + f.status)}</span>
-          ${f.status === 'running' ? `<span class="dim">${sets}</span>` : ''}</td>
+          ${f.status === 'running' ? ` ${sets}` : ''}</td>
         <td>${cell(f.home)}</td><td class="num">${chance}</td><td>${cell(f.away)}</td></tr>`;
     }).join('');
 

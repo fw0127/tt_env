@@ -330,6 +330,11 @@ def predict_live(api: MyTTApi, meeting_id: str) -> Dict[str, Any]:
     for name in FIXTURE_ORDER:
         row = rows.get(name)
         hs, gs = (row.get("sets_home") or 0, row.get("sets_guest") or 0) if row else (0, 0)
+        games = []
+        for i in range(1, 8):                      # 每局小分，供界面悬停显示
+            a, b = (row or {}).get(f"set{i}_home") or 0, (row or {}).get(f"set{i}_guest") or 0
+            if a or b:
+                games.append(f"{a}:{b}")
         done = bool(row) and (max(hs, gs) >= 3 or row.get("home_wo") or row.get("guest_wo"))
         is_double = name.startswith("D")
         if is_double:
@@ -345,7 +350,7 @@ def predict_live(api: MyTTApi, meeting_id: str) -> Dict[str, Any]:
             "name": name, "type": "double" if is_double else "single",
             "home": [{**p, "ttr": ttr_of(p["nuid"])} for p in home_players],
             "away": [{**p, "ttr": ttr_of(p["nuid"])} for p in away_players],
-            "sets": [hs, gs],
+            "sets": [hs, gs], "games": games,
         }
         if done:
             decided_home += hs > gs
