@@ -127,9 +127,14 @@ def win_probability(own_ttr: float, opp_ttr: float) -> float:
     return 1 / (1 + 10 ** ((opp_ttr - own_ttr) / 150))
 
 
-def _score_distribution(probs: List[float], target: int) -> Dict[tuple, float]:
-    """按出场顺序逐场推概率，一方先到 target 分即结束。返回 {(主分, 客分): 概率}。"""
-    dist: Dict[tuple, float] = {(0, 0): 1.0}
+def _score_distribution(probs: List[float], target: int,
+                        start: tuple = (0, 0)) -> Dict[tuple, float]:
+    """按出场顺序逐场推概率，一方先到 target 分即结束。返回 {(主分, 客分): 概率}。
+
+    start 是已经拿到的分数 —— 必须作为 DP 起点，不能算完再加：
+    比赛可能已经结束（比分到 9），后面的场次根本不会打。
+    """
+    dist: Dict[tuple, float] = {start: 1.0}
     for p in probs:
         nxt: Dict[tuple, float] = {}
         for (h, a), w in dist.items():
@@ -192,6 +197,186 @@ def predict_meeting(api: MyTTApi, home_team_id: str, away_team_id: str) -> Dict[
         "likely_scores": [{"home": h, "away": a, "p": w} for (h, a), w in top],
         "roster_size": n,
         "doubles_note": True,
+    }
+
+
+# 16 场的完整顺序（名称与站点一致）
+FIXTURE_ORDER = (DOUBLES_NAMES
+                 + [f"{h + 1}-{a + 1}" for h, a in SINGLES_ORDER]
+                 + [FINAL_DOUBLE])
+
+
+def _bo5(g: float, h: int = 0, a: int = 0) -> float:
+    """单局胜率 g 时，从 h:a 开始先赢 3 局的概率（五局三胜）。"""
+    if h >= 3:
+        return 1.0
+    if a >= 3:
+        return 0.0
+    return g * _bo5(g, h + 1, a) + (1 - g) * _bo5(g, h, a + 1)
+
+
+def _game_prob(match_p: float) -> float:
+    """由单场胜率反推单局胜率（二分）。用于把已打的局分折进概率。"""
+    lo, hi = 0.0, 1.0
+    for _ in range(40):
+        mid = (lo + hi) / 2
+        if _bo5(mid) < match_p:
+            lo = mid
+        else:
+            hi = mid
+    return (lo + hi) / 2
+
+
+def predict_live(api: MyTTApi, meeting_id: str) -> Dict[str, Any]:
+    """进行中的团体赛：按已出结果 + 当前局分，推算剩余场次与最终比分。
+
+    比赛开始后出场名单和双打配对都能从 Live 数据里读到，比赛前的估算要准；
+    还没登场的位置（常见是 5、6 号）回退到队内排名。
+    """
+    d = (api.get_meeting_live(str(meeting_id)) or {}).get("data") or {}
+    if not d:
+        return {"error": "无法获取该场比赛"}
+    rows = {m.get("match_name"): m for m in (d.get("match") or [])}
+
+    ttr_cache: Dict[str, Optional[int]] = {}
+
+    def ttr_of(nuid: Optional[str]) -> Optional[int]:
+        if not nuid:
+            return None
+        if nuid not in ttr_cache:
+            v = api.get_ttr_player(nuid).get("ttr")
+            ttr_cache[nuid] = int(v) if str(v or "").lstrip("-").isdigit() else None
+        return ttr_cache[nuid]
+
+    def person(row: Dict[str, Any], key: str) -> Optional[Dict[str, Any]]:
+        p = row.get(key) or {}
+        if not p.get("person_id"):
+            return None
+        return {"name": f"{p.get('lastname', '')}, {p.get('firstname', '')}".strip(", "),
+                "nuid": p.get("person_id")}
+
+    # 从已登场的场次还原双方的出场位置与双打配对
+    singles_home: Dict[int, Dict[str, Any]] = {}
+    singles_away: Dict[int, Dict[str, Any]] = {}
+    doubles_home: Dict[str, List[Dict[str, Any]]] = {}
+    doubles_away: Dict[str, List[Dict[str, Any]]] = {}
+    for name, row in rows.items():
+        if row.get("game_type") == "double":
+            h_no, a_no = name.replace("D", "").split("-")
+            pair_h = [x for x in (person(row, "mm_player11"), person(row, "mm_player12")) if x]
+            pair_a = [x for x in (person(row, "mm_player21"), person(row, "mm_player22")) if x]
+            if pair_h:
+                doubles_home.setdefault(h_no, pair_h)
+            if pair_a:
+                doubles_away.setdefault(a_no, pair_a)
+        else:
+            h_no, a_no = name.split("-")
+            if (ph := person(row, "mm_player11")):
+                singles_home.setdefault(int(h_no), ph)
+            if (pa := person(row, "mm_player21")):
+                singles_away.setdefault(int(a_no), pa)
+
+    # 还没登场的位置用队内排名补齐
+    def fill_from_roster(team_id: Optional[str], known: Dict[int, Dict[str, Any]],
+                         present: set) -> None:
+        """还没登场的位置（通常是 5、6 号）只能猜，标记 assumed 让界面注明。
+
+        不能直接拿队内最强的几个来填：今天没来的往往正是排名靠前的人。
+        改为从「已登场球员里最靠后的那个排名」继续往下取，不够再由弱到强补。
+        """
+        missing = [i for i in range(1, 7) if i not in known]
+        if not team_id or not missing:
+            return
+        used = {p.get("nuid") for p in known.values()}
+        roster = [p for p in collect_team_analysis(api, str(team_id)) if p.get("ttr")]
+        rank_of = lambda p: int(p["rank"]) if str(p.get("rank", "")).isdigit() else 99
+        by_nuid = {p["nuid"]: p for p in roster}
+
+        # 已经打过双打的人一定在场，优先拿来填空缺的单打位置
+        here = [by_nuid[n] for n in present if n not in used and n in by_nuid]
+        rest = [p for p in roster if p["nuid"] not in used and p not in here]
+        floor = max((rank_of(p) for p in roster if p["nuid"] in used), default=0)
+        pool = sorted(here, key=rank_of)
+        pool += [p for p in rest if rank_of(p) > floor]
+        pool += [p for p in sorted(rest, key=rank_of, reverse=True) if p not in pool]
+        for i, p in zip(missing, pool):
+            known[i] = {"name": p["name"], "nuid": p["nuid"], "assumed": True}
+            if p["nuid"] not in ttr_cache:
+                ttr_cache[p["nuid"]] = int(p["ttr"])
+
+    present_home = {p["nuid"] for pair in doubles_home.values() for p in pair}
+    present_away = {p["nuid"] for pair in doubles_away.values() for p in pair}
+    fill_from_roster(d.get("team_home_id"), singles_home, present_home)
+    fill_from_roster(d.get("team_guest_id"), singles_away, present_away)
+
+    def side_ttr(players: List[Dict[str, Any]]) -> Optional[float]:
+        vals = [v for v in (ttr_of(p.get("nuid")) for p in players) if v]
+        return sum(vals) / len(vals) if vals else None
+
+    def doubles_side(pairs: Dict[str, List[Dict[str, Any]]], no: str, singles: Dict[int, Dict[str, Any]]) -> List[Dict[str, Any]]:
+        # 没登场过的双打：用该号次对应的两名队员近似（D1→1、2 号，D2→3、4 号，D3→5、6 号）
+        if no in pairs:
+            return pairs[no]
+        base = (int(no) - 1) * 2 + 1
+        return [p for p in (singles.get(base), singles.get(base + 1)) if p]
+
+    decided_home = decided_away = 0
+    fixtures: List[Dict[str, Any]] = []
+    for name in FIXTURE_ORDER:
+        row = rows.get(name)
+        hs, gs = (row.get("sets_home") or 0, row.get("sets_guest") or 0) if row else (0, 0)
+        done = bool(row) and (max(hs, gs) >= 3 or row.get("home_wo") or row.get("guest_wo"))
+        is_double = name.startswith("D")
+        if is_double:
+            h_no, a_no = name.replace("D", "").split("-")
+            home_players = doubles_side(doubles_home, h_no, singles_home)
+            away_players = doubles_side(doubles_away, a_no, singles_away)
+        else:
+            h_no, a_no = name.split("-")
+            home_players = [x for x in [singles_home.get(int(h_no))] if x]
+            away_players = [x for x in [singles_away.get(int(a_no))] if x]
+
+        entry: Dict[str, Any] = {
+            "name": name, "type": "double" if is_double else "single",
+            "home": [{**p, "ttr": ttr_of(p["nuid"])} for p in home_players],
+            "away": [{**p, "ttr": ttr_of(p["nuid"])} for p in away_players],
+            "sets": [hs, gs],
+        }
+        if done:
+            decided_home += hs > gs
+            decided_away += gs > hs
+            entry["status"] = "done"
+            entry["p"] = 1.0 if hs > gs else 0.0
+        else:
+            h_ttr, a_ttr = side_ttr(home_players), side_ttr(away_players)
+            p = win_probability(h_ttr, a_ttr) if (h_ttr and a_ttr) else 0.5
+            if hs or gs:                       # 正在打：把已打的局分折进去
+                entry["status"] = "running"
+                p = _bo5(_game_prob(p), hs, gs)
+            else:
+                entry["status"] = "pending"
+            entry["p"] = p
+        fixtures.append(entry)
+
+    target = len(fixtures) // 2 + 1
+    remaining = [f["p"] for f in fixtures if f["status"] != "done"]
+    dist = _score_distribution(remaining, target, (decided_home, decided_away))
+
+    home_win = sum(w for (h, a), w in dist.items() if h > a)
+    draw = sum(w for (h, a), w in dist.items() if h == a)
+    return {
+        "meeting_id": str(meeting_id),
+        "home_team": d.get("team_home"), "away_team": d.get("team_guest"),
+        "home_team_id": d.get("team_home_id"), "away_team_id": d.get("team_guest_id"),
+        "current": {"home": decided_home, "away": decided_away},
+        "completed": bool(d.get("is_completed")),
+        "fixtures": fixtures,
+        "target": target,
+        "probabilities": {"home": home_win, "draw": draw, "away": 1 - home_win - draw},
+        "expected": {"home": sum(h * w for (h, a), w in dist.items()),
+                     "away": sum(a * w for (h, a), w in dist.items())},
+        "likely_scores": [{"home": h, "away": a, "p": w}
+                          for (h, a), w in sorted(dist.items(), key=lambda kv: -kv[1])[:5]],
     }
 
 
